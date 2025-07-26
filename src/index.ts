@@ -43,7 +43,7 @@ app.get('/', async(req, res) => {
 app.post('/webhook/twilio', async(req, res) => {
   try {
     const message: TwilioMessage = req.body;
-    
+
     if (!message.Body) {
       return res.sendStatus(200);
     }
@@ -107,7 +107,7 @@ app.post('/webhook/twilio', async(req, res) => {
       from: process.env.TWILIO_PHONE_NUMBER!,
       to: phoneNumber,
     });
-    
+
     res.sendStatus(200);
   } catch (error) {
     console.error('Error processing webhook:', error);
@@ -118,13 +118,13 @@ app.post('/webhook/twilio', async(req, res) => {
 // Initialize app with migrations
 async function startApp() {
   await runMigrations();
-  
+
   app.listen(port, () => {
     console.log(`Expense tracker bot listening at http://localhost:${port}`);
   });
 }
 
-startApp().catch(error => {
+startApp().catch((error) => {
   console.error('Failed to start application:', error);
   process.exit(1);
 });
