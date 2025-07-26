@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "outDir": "dist",
-
+    "rootDir": "src",
     "incremental": true,
     "target": "es6",
     "module": "commonjs",
@@ -9,5 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
