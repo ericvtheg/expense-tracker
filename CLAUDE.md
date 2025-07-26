@@ -55,4 +55,4 @@ Required for full functionality:
 - `PORT` - Server port (defaults to 3000)
 - `TELEGRAM_BOT_TOKEN` - Telegram bot authentication
 - `OPENAI_API_KEY` - OpenAI API access
-- `OPENAI_MODEL` - OpenAI model selection (e.g., "gpt-4")
+- `OPENAI_MODEL` - OpenAI model selection (e.g., "gpt-3.5-turbo", "gpt-4")
