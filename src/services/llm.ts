@@ -1,18 +1,23 @@
 import OpenAI from 'openai';
-import {EXPENSE_CATEGORIES, type ExpenseCategory} from './categories';
+import { EXPENSE_CATEGORIES, type ExpenseCategory } from './categories';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
 });
 
 export interface ParsedExpense {
-	amount: number;
-	category: ExpenseCategory;
-	date: Date;
-	description: string;
+  amount: number;
+  category: ExpenseCategory;
+  date: Date;
+  description: string;
 }
 
-export async function parseExpenseMessage(message: string): Promise<ParsedExpense | null> {
+export async function parseExpenseMessage(
+	message: string,
+): Promise<ParsedExpense | null> {
 	const prompt = `You are an expense tracker assistant. Parse this message and extract expense information.
 
 Message: "${message}"
@@ -56,13 +61,13 @@ Examples:
 		}
 
 		const parsed = JSON.parse(content);
-		
+
 		// Validate the parsed response
 		if (
 			typeof parsed.amount !== 'number' ||
-			!EXPENSE_CATEGORIES.includes(parsed.category) ||
-			!parsed.date ||
-			!parsed.description
+      !EXPENSE_CATEGORIES.includes(parsed.category) ||
+      !parsed.date ||
+      !parsed.description
 		) {
 			return null;
 		}
@@ -78,3 +83,4 @@ Examples:
 		return null;
 	}
 }
+
