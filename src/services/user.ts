@@ -2,14 +2,13 @@ import {eq} from 'drizzle-orm';
 import {db} from '../db';
 import {users, type User, type NewUser} from '../db/schema';
 
-export async function findOrCreateUser(telegramUserId: string, userInfo: {
+export async function findOrCreateUser(phoneNumber: string, userInfo: {
 	firstName?: string;
 	lastName?: string;
-	username?: string;
 }): Promise<User> {
   // Try to find existing user
   const existingUser = await db.query.users.findFirst({
-    where: eq(users.telegramUserId, telegramUserId),
+    where: eq(users.phoneNumber, phoneNumber),
   });
 
   if (existingUser) {
@@ -18,10 +17,9 @@ export async function findOrCreateUser(telegramUserId: string, userInfo: {
 
   // Create new user
   const newUser: NewUser = {
-    telegramUserId,
+    phoneNumber,
     firstName: userInfo.firstName,
     lastName: userInfo.lastName,
-    username: userInfo.username,
   };
 
   const [createdUser] = await db.insert(users).values(newUser).returning();

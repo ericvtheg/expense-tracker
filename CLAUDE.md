@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an expense tracker Telegram bot built with Express.js and TypeScript. The bot uses LLM integration to parse natural language expense messages and automatically categorize spending. The application connects to PostgreSQL via Drizzle ORM and is designed for deployment on Railway.
+This is an expense tracker RCS messaging service built with Express.js and TypeScript. The service uses Twilio for RCS messaging and LLM integration to parse natural language expense messages and automatically categorize spending. The application connects to PostgreSQL via Drizzle ORM and is designed for deployment on Railway.
 
 ## Development Commands
 
@@ -42,10 +42,10 @@ This is an expense tracker Telegram bot built with Express.js and TypeScript. Th
 ## Key Technical Requirements
 
 Based on SPEC.md, this project will implement:
-- Telegram Bot API integration
+- Twilio RCS messaging integration
 - OpenAI API for natural language processing
 - Default expense categories (Food & Drinks, Transportation, Shopping, etc.)
-- User management via Telegram user IDs
+- User management via phone numbers
 - Monthly spending summaries and categorization
 
 ## Environment Variables
@@ -53,6 +53,8 @@ Based on SPEC.md, this project will implement:
 Required for full functionality:
 - `DATABASE_URL` - PostgreSQL connection string
 - `PORT` - Server port (defaults to 3000)
-- `TELEGRAM_BOT_TOKEN` - Telegram bot authentication
+- `TWILIO_ACCOUNT_SID` - Twilio account SID
+- `TWILIO_AUTH_TOKEN` - Twilio authentication token
+- `TWILIO_PHONE_NUMBER` - Twilio phone number for sending messages
 - `OPENAI_API_KEY` - OpenAI API access
 - `OPENAI_MODEL` - OpenAI model selection (e.g., "gpt-3.5-turbo", "gpt-4")

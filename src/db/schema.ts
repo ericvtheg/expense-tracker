@@ -2,10 +2,9 @@ import {pgTable, serial, text, decimal, timestamp, integer} from 'drizzle-orm/pg
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
-  telegramUserId: text('telegram_user_id').notNull().unique(),
+  phoneNumber: text('phone_number').notNull().unique(),
   firstName: text('first_name'),
   lastName: text('last_name'),
-  username: text('username'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

@@ -2,8 +2,9 @@ import bodyParser from 'body-parser';
 import express from 'express';
 import dotenv from 'dotenv';
 import {sql} from 'drizzle-orm';
+import {migrate} from 'drizzle-orm/postgres-js/migrator';
 import {db} from './db';
-import {bot, type TelegramMessage} from './services/telegram';
+import {twilioClient, type TwilioMessage} from './services/twilio';
 import {parseExpenseMessage} from './services/llm';
 import {findOrCreateUser} from './services/user';
 import {
@@ -13,6 +14,18 @@ import {
 } from './services/expense';
 
 dotenv.config();
+
+// Run migrations on startup
+async function runMigrations() {
+  try {
+    console.log('Running database migrations...');
+    await migrate(db, {migrationsFolder: './drizzle'});
+    console.log('Database migrations completed successfully');
+  } catch (error) {
+    console.error('Migration failed:', error);
+    process.exit(1);
+  }
+}
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -26,31 +39,33 @@ app.get('/', async(req, res) => {
   res.send(`Hello, World! The time from the DB is ${result[0].now}`);
 });
 
-// Telegram webhook endpoint
-app.post('/webhook/telegram', async(req, res) => {
+// Twilio webhook endpoint for RCS messages
+app.post('/webhook/twilio', async(req, res) => {
   try {
-    const update = req.body;
-
-    if (!update.message?.text) {
+    const message: TwilioMessage = req.body;
+    
+    if (!message.Body) {
       return res.sendStatus(200);
     }
 
-    const message: TelegramMessage = update.message;
-    const chatId = message.chat.id;
-    const text = message.text;
+    const phoneNumber = message.From;
+    const text = message.Body;
 
-    // Find or create user
-    const user = await findOrCreateUser(message.from.id.toString(), {
-      firstName: message.from.first_name,
-      lastName: message.from.last_name,
-      username: message.from.username,
+    // Find or create user using phone number
+    const user = await findOrCreateUser(phoneNumber, {
+      firstName: undefined,
+      lastName: undefined,
     });
 
     // Parse the expense message using LLM
-    const parsedExpense = await parseExpenseMessage(text!);
+    const parsedExpense = await parseExpenseMessage(text);
 
     if (!parsedExpense) {
-      await bot.sendMessage(chatId, 'I don\'t understand, please try again');
+      await twilioClient.messages.create({
+        body: 'I don\'t understand, please try again',
+        from: process.env.TWILIO_PHONE_NUMBER!,
+        to: phoneNumber,
+      });
       return res.sendStatus(200);
     }
 
@@ -87,7 +102,12 @@ app.post('/webhook/telegram', async(req, res) => {
     ).toLocaleDateString('en-US', {month: 'long'});
     const response = `Got it! Added $${parsedExpense.amount} under ${parsedExpense.category} category. Your total for ${monthName} is $${monthlyTotal.toFixed(2)} and ${parsedExpense.category} total is $${categoryTotal.toFixed(2)}.`;
 
-    await bot.sendMessage(chatId, response);
+    await twilioClient.messages.create({
+      body: response,
+      from: process.env.TWILIO_PHONE_NUMBER!,
+      to: phoneNumber,
+    });
+    
     res.sendStatus(200);
   } catch (error) {
     console.error('Error processing webhook:', error);
@@ -95,6 +115,16 @@ app.post('/webhook/telegram', async(req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Expense tracker bot listening at http://localhost:${port}`);
+// Initialize app with migrations
+async function startApp() {
+  await runMigrations();
+  
+  app.listen(port, () => {
+    console.log(`Expense tracker bot listening at http://localhost:${port}`);
+  });
+}
+
+startApp().catch(error => {
+  console.error('Failed to start application:', error);
+  process.exit(1);
 });
