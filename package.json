@@ -7,7 +7,6 @@
   "license": "MIT",
   "scripts": {
     "dev": "nodemon src/index.ts",
-    "dev:polling": "nodemon src/index-polling.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint 'src/**/*.ts' --fix",
