@@ -7,7 +7,7 @@ import pg from 'pg';
 const pool = new pg.Pool();
 
 const app = express();
-const port = process.env.PORT || 3333;
+const port = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 app.use(bodyParser.raw({type: 'application/vnd.custom-type'}));
