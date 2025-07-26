@@ -1,22 +1,22 @@
 import {pgTable, serial, text, decimal, timestamp, integer} from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
-	id: serial('id').primaryKey(),
-	telegramUserId: text('telegram_user_id').notNull().unique(),
-	firstName: text('first_name'),
-	lastName: text('last_name'),
-	username: text('username'),
-	createdAt: timestamp('created_at').defaultNow().notNull(),
+  id: serial('id').primaryKey(),
+  telegramUserId: text('telegram_user_id').notNull().unique(),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  username: text('username'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const transactions = pgTable('transactions', {
-	id: serial('id').primaryKey(),
-	userId: integer('user_id').references(() => users.id).notNull(),
-	amount: decimal('amount', {precision: 10, scale: 2}).notNull(),
-	category: text('category').notNull(),
-	description: text('description').notNull(),
-	transactionDate: timestamp('transaction_date').notNull(),
-	createdAt: timestamp('created_at').defaultNow().notNull(),
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  amount: decimal('amount', {precision: 10, scale: 2}).notNull(),
+  category: text('category').notNull(),
+  description: text('description').notNull(),
+  transactionDate: timestamp('transaction_date').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;
