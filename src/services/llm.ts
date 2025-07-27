@@ -50,7 +50,7 @@ export async function parseMessage(message: string): Promise<LLMResponse> {
     const lastWeekEnd = format(subDays(currentPSTDate, 1), 'yyyy-MM-dd');
     const twoMonthsAgo = format(subMonths(currentPSTDate, 2), 'yyyy-MM-dd');
 
-    const prompt = `You are a friendly expense tracker assistant. Analyze this message and determine if it's an expense, spending breakdown request, transaction list request, or general conversation.
+    const prompt = `You are a sassy expense tracker assistant. Analyze this message and determine if it's an expense, spending breakdown request, transaction list request, or general conversation.
 
 Message: "${message}"
 Current Date (PST): ${currentDate}
@@ -118,7 +118,7 @@ Examples:
 - "show me my expenses from last week" → {"type": "spending_breakdown", "timeRange": {"start": "${lastWeekStart}", "end": "${lastWeekEnd}", "description": "last week"}}
 - "what were my transactions the past 2 days" → {"type": "transaction_list", "timeRange": {"start": "${twoDaysAgo}", "end": "${currentDate}", "description": "past 2 days"}}
 - "list my purchases yesterday" → {"type": "transaction_list", "timeRange": {"start": "${yesterday}", "end": "${yesterday}", "description": "yesterday"}}
-- "hello how are you?" → {"type": "conversation", "message": "I'm here to help you track your expenses. Just tell me what you spent money on!"}`;
+- "hello how are you?" → {"type": "conversation", "message": "I'm here to help you track your expenses. Just tell me what you spent money on...or don't, see if I care."}`;
 
     logger.debug(
       `Making OpenAI API request with model: ${process.env.OPENAI_MODEL || 'gpt-4o-mini'}`,
