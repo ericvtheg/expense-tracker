@@ -8,6 +8,8 @@ This is an expense tracker Telegram bot built with Express.js and TypeScript. Th
 
 ## Development Commands
 
+**IMPORTANT: Always use `yarn` for package management and script execution. Never use `npm`.**
+
 ### Local Development
 - `yarn services:up` - Start all development services (PostgreSQL + Telegram Bot API)
 - `yarn dev` - Start development server with nodemon
@@ -18,6 +20,7 @@ This is an expense tracker Telegram bot built with Express.js and TypeScript. Th
 ### Code Quality
 - Use ESLint with XO config for linting
 - TypeScript compilation with strict settings
+- Always run `yarn build` to check for compilation errors before completing tasks
 
 ## Architecture
 
@@ -53,6 +56,15 @@ Based on SPEC.md, this project will implement:
 - Default expense categories (Food & Drinks, Transportation, Shopping, etc.)
 - User management via Telegram user IDs
 - Monthly spending summaries and categorization
+
+## Development Guidelines
+
+### Natural Language Processing
+**CRITICAL: Always leverage the LLM (OpenAI API) for all natural language parsing tasks.** 
+- Never implement manual string parsing or regex-based logic for understanding user input
+- Use the LLM to interpret time ranges, expense amounts, categories, and any other natural language input
+- The LLM should handle date calculations, time period understanding, and contextual interpretation
+- Update the LLM prompt to handle new types of user requests rather than writing custom parsing logic
 
 ## Environment Variables
 

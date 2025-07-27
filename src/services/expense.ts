@@ -1,4 +1,4 @@
-import {eq, and, gte, lte, sum} from 'drizzle-orm';
+import {eq, and, gte, lte, sum, desc, count} from 'drizzle-orm';
 import {startOfMonth, endOfMonth} from 'date-fns';
 import {db} from '../db';
 import {
@@ -109,6 +109,83 @@ export async function getCategoryTotal(
   } catch (error) {
     logger.error(
       `Failed to get category total for user ${userId}, category ${category}:`,
+      error,
+    );
+    throw error;
+  }
+}
+
+export interface CategoryBreakdown {
+  category: string;
+  total: number;
+  count: number;
+}
+
+export interface SpendingBreakdown {
+  totalAmount: number;
+  totalTransactions: number;
+  categories: CategoryBreakdown[];
+  timeRange: {
+    start: Date;
+    end: Date;
+    description: string;
+  };
+}
+
+export async function getSpendingBreakdown(
+  userId: number,
+  startDate: Date,
+  endDate: Date,
+  description: string,
+): Promise<SpendingBreakdown> {
+  try {
+    logger.debug(
+      `Getting spending breakdown for user ${userId} from ${startDate.toISOString()} to ${endDate.toISOString()}`,
+    );
+
+    const result = await db
+      .select({
+        total: sum(transactions.amount),
+        category: transactions.category,
+        count: count(),
+      })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          gte(transactions.transactionDate, startDate),
+          lte(transactions.transactionDate, endDate),
+        ),
+      )
+      .groupBy(transactions.category)
+      .orderBy(desc(sum(transactions.amount)));
+
+    const categories: CategoryBreakdown[] = result.map(row => ({
+      category: row.category || 'Unknown',
+      total: Number(row.total) || 0,
+      count: Number(row.count) || 0,
+    }));
+
+    const totalAmount = categories.reduce((sum, cat) => sum + cat.total, 0);
+    const totalTransactions = categories.reduce((sum, cat) => sum + cat.count, 0);
+
+    logger.debug(
+      `Spending breakdown for user ${userId}: $${totalAmount} across ${totalTransactions} transactions`,
+    );
+
+    return {
+      totalAmount,
+      totalTransactions,
+      categories,
+      timeRange: {
+        start: startDate,
+        end: endDate,
+        description,
+      },
+    };
+  } catch (error) {
+    logger.error(
+      `Failed to get spending breakdown for user ${userId}:`,
       error,
     );
     throw error;

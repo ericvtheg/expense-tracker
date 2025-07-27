@@ -2,7 +2,7 @@ import {Telegraf} from 'telegraf';
 import dotenv from 'dotenv';
 import {findOrCreateUser} from './user';
 import {parseMessage} from './llm';
-import {addExpense, getMonthlyTotal, getCategoryTotal} from './expense';
+import {addExpense, getMonthlyTotal, getCategoryTotal, getSpendingBreakdown} from './expense';
 import logger from '../utils/logger';
 
 dotenv.config();
@@ -88,6 +88,31 @@ export async function handleTelegramMessage(message: TelegramMessage) {
     if (llmResponse.type === 'conversation') {
       logger.info('Message identified as conversation');
       await sendTelegramMessage(message.chatId, llmResponse.message!);
+      return;
+    }
+
+    if (llmResponse.type === 'spending_breakdown' && llmResponse.timeRange) {
+      const {start, end, description} = llmResponse.timeRange;
+      logger.info(`Processing spending breakdown request for: ${description}`);
+
+      const breakdown = await getSpendingBreakdown(user.id, start, end, description);
+      
+      if (breakdown.totalTransactions === 0) {
+        await sendTelegramMessage(message.chatId, `No expenses found for ${description}.`);
+        return;
+      }
+
+      let response = `💰 **Spending Breakdown for ${description}**\n\n`;
+      response += `**Total:** $${breakdown.totalAmount.toFixed(2)} (${breakdown.totalTransactions} transactions)\n\n`;
+      response += `**By Category:**\n`;
+      
+      breakdown.categories.forEach(cat => {
+        const percentage = ((cat.total / breakdown.totalAmount) * 100).toFixed(1);
+        response += `• ${cat.category}: $${cat.total.toFixed(2)} (${cat.count} transactions, ${percentage}%)\n`;
+      });
+
+      await sendTelegramMessage(message.chatId, response);
+      logger.info('Spending breakdown processed successfully');
       return;
     }
 

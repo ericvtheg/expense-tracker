@@ -16,10 +16,17 @@ export interface ParsedExpense {
   description: string;
 }
 
+export interface TimeRange {
+  start: Date;
+  end: Date;
+  description: string;
+}
+
 export interface LLMResponse {
-  type: 'expense' | 'conversation';
+  type: 'expense' | 'conversation' | 'spending_breakdown';
   expense?: ParsedExpense;
   message?: string;
+  timeRange?: TimeRange;
 }
 
 export async function parseMessage(
@@ -28,15 +35,23 @@ export async function parseMessage(
   try {
     logger.debug(`Parsing message with LLM: "${message}"`);
 
-    const prompt = `You are a friendly expense tracker assistant. Analyze this message and determine if it's an expense or general conversation.
+    const currentDate = new Date().toISOString().split('T')[0];
+    
+    const prompt = `You are a friendly expense tracker assistant. Analyze this message and determine if it's an expense, spending breakdown request, or general conversation.
 
 Message: "${message}"
+Current Date: ${currentDate}
 
 If this is an EXPENSE message, extract:
 1. Amount (as a number, no currency symbols)
 2. Category (must be one of: ${EXPENSE_CATEGORIES.join(', ')})
 3. Date (if mentioned, otherwise null - we'll use today's date)
 4. Description (clean, concise description of the expense)
+
+If this is a SPENDING BREAKDOWN request (asking about spending over time), extract:
+1. Start date (calculate from current date based on the time range)
+2. End date (usually current date unless specified)
+3. Description of the time period
 
 If this is GENERAL CONVERSATION (greetings, questions, unrelated chat), provide a brief, friendly response.
 
@@ -53,6 +68,16 @@ For expenses:
   }
 }
 
+For spending breakdown:
+{
+  "type": "spending_breakdown",
+  "timeRange": {
+    "start": "YYYY-MM-DD",
+    "end": "YYYY-MM-DD",
+    "description": "brief description of time period"
+  }
+}
+
 For conversation:
 {
   "type": "conversation",
@@ -61,9 +86,9 @@ For conversation:
 
 Examples:
 - "spent 30 bucks on coffee this morning" → {"type": "expense", "expense": {"amount": 30, "category": "Food & Drinks", "date": null, "description": "coffee"}}
-- "bought lunch yesterday for 15 dollars" → {"type": "expense", "expense": {"amount": 15, "category": "Food & Drinks", "date": "2024-07-26", "description": "lunch"}}
-- "hello how are you?" → {"type": "conversation", "message": "Hi there! I'm here to help you track your expenses. Just tell me what you spent money on!"}
-- "what's the weather like" → {"type": "conversation", "message": "I'm an expense tracker, so I don't know about weather. But I can help you track any spending!"}`;
+- "what has my spending been the past 2 months" → {"type": "spending_breakdown", "timeRange": {"start": "2025-05-27", "end": "${currentDate}", "description": "past 2 months"}}
+- "show me my expenses from last week" → {"type": "spending_breakdown", "timeRange": {"start": "2025-07-14", "end": "2025-07-20", "description": "last week"}}
+- "hello how are you?" → {"type": "conversation", "message": "Hi there! I'm here to help you track your expenses. Just tell me what you spent money on!"}`;
 
     logger.debug(`Making OpenAI API request with model: ${process.env.OPENAI_MODEL || 'gpt-3.5-turbo'}`);
 
@@ -98,6 +123,29 @@ Examples:
       return {
         type: 'conversation',
         message: parsed.message || 'Thanks for chatting!',
+      };
+    }
+
+    if (parsed.type === 'spending_breakdown' && parsed.timeRange) {
+      const timeRange = parsed.timeRange;
+      logger.debug(`Validating spending breakdown: start=${timeRange.start}, end=${timeRange.end}`);
+
+      if (!timeRange.start || !timeRange.end || !timeRange.description) {
+        logger.warn('Spending breakdown validation failed', timeRange);
+        return {
+          type: 'conversation',
+          message: 'I couldn\'t understand the time range. Could you be more specific about the period you want to see?',
+        };
+      }
+
+      logger.info(`Valid spending breakdown request for: ${timeRange.description}`);
+      return {
+        type: 'spending_breakdown',
+        timeRange: {
+          start: new Date(timeRange.start),
+          end: new Date(timeRange.end),
+          description: timeRange.description,
+        },
       };
     }
 
