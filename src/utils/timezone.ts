@@ -29,7 +29,10 @@ export function formatDateForDisplay(date: Date): string {
   return format(pstDate, 'MMM d, yyyy h:mm a zzz', {timeZone: PST_TIMEZONE});
 }
 
-export function formatDateForUser(date: Date, formatString: string = 'MMM d, yyyy'): string {
+export function formatDateForUser(
+  date: Date,
+  formatString: string = 'MMM d, yyyy',
+): string {
   const pstDate = convertUTCToPST(date);
   return format(pstDate, formatString, {timeZone: PST_TIMEZONE});
 }
