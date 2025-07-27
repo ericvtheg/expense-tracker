@@ -189,7 +189,7 @@ The project includes Docker Compose configuration for local development:
 
 **Important for Telegram Local API**: To use the local Telegram Bot API instance, you need to obtain API credentials from [my.telegram.org](https://my.telegram.org):
 
-1. Visit [my.telegram.org](https://my.telegram.org) and log in with your Telegram account
+1. Visit [my.telegram.org](https://my.telegram.org/auth) and log in with your Telegram account
 2. Go to "API development tools" and create a new application
 3. Copy the `api_id` and `api_hash` values
 4. Add them to your `.env` file:
