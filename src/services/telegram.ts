@@ -10,6 +10,7 @@ import {
   getTransactionsList,
 } from './expense';
 import logger from '../utils/logger';
+import {formatDateForUser, getCurrentPSTDate} from '../utils/timezone';
 
 dotenv.config();
 
@@ -154,7 +155,7 @@ export async function handleTelegramMessage(message: TelegramMessage) {
       let response = `📋 **Transactions for ${description}**\n\n`;
 
       transactionsList.transactions.forEach((transaction, index) => {
-        const date = new Date(transaction.transactionDate).toLocaleDateString();
+        const date = formatDateForUser(new Date(transaction.transactionDate));
         response += `${index + 1}. **$${Number(transaction.amount).toFixed(2)}** - ${transaction.category}\n`;
         response += `   ${transaction.description} (${date})\n\n`;
       });
@@ -187,8 +188,8 @@ export async function handleTelegramMessage(message: TelegramMessage) {
       });
       logger.debug('Expense added to database');
 
-      // Get monthly totals
-      const now = new Date();
+      // Get monthly totals using PST
+      const now = getCurrentPSTDate();
       const currentMonth = now.getMonth() + 1;
       const currentYear = now.getFullYear();
 

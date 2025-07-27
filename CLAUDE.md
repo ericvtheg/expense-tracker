@@ -66,6 +66,14 @@ Based on SPEC.md, this project will implement:
 - The LLM should handle date calculations, time period understanding, and contextual interpretation
 - Update the LLM prompt to handle new types of user requests rather than writing custom parsing logic
 
+## Timezone Configuration
+
+The application defaults to **Pacific Standard Time (PST)** for all user interactions and date displays. This means:
+- All user date inputs are interpreted as PST
+- Displayed dates and times are shown in PST
+- Database storage uses UTC for consistency
+- Timezone conversion is handled automatically by the `src/utils/timezone.ts` module
+
 ## Environment Variables
 
 Required for full functionality:

@@ -3,6 +3,12 @@ import {EXPENSE_CATEGORIES, type ExpenseCategory} from './categories';
 import dotenv from 'dotenv';
 import logger from '../utils/logger';
 import {subDays, subMonths, format} from 'date-fns';
+import {
+  getCurrentPSTDate,
+  parseUserDateInput,
+  startOfDayPSTFromString,
+  endOfDayPSTFromString,
+} from '../utils/timezone';
 
 dotenv.config();
 
@@ -34,20 +40,20 @@ export async function parseMessage(message: string): Promise<LLMResponse> {
   try {
     logger.debug(`Parsing message with LLM: "${message}"`);
 
-    const currentDate = new Date().toISOString().split('T')[0];
+    const currentPSTDate = getCurrentPSTDate();
+    const currentDate = format(currentPSTDate, 'yyyy-MM-dd');
 
-    // Calculate relative dates for examples using date-fns
-    const today = new Date();
-    const yesterday = format(subDays(today, 1), 'yyyy-MM-dd');
-    const twoDaysAgo = format(subDays(today, 2), 'yyyy-MM-dd');
-    const lastWeekStart = format(subDays(today, 7), 'yyyy-MM-dd');
-    const lastWeekEnd = format(subDays(today, 1), 'yyyy-MM-dd');
-    const twoMonthsAgo = format(subMonths(today, 2), 'yyyy-MM-dd');
+    // Calculate relative dates for examples using PST timezone
+    const yesterday = format(subDays(currentPSTDate, 1), 'yyyy-MM-dd');
+    const twoDaysAgo = format(subDays(currentPSTDate, 2), 'yyyy-MM-dd');
+    const lastWeekStart = format(subDays(currentPSTDate, 7), 'yyyy-MM-dd');
+    const lastWeekEnd = format(subDays(currentPSTDate, 1), 'yyyy-MM-dd');
+    const twoMonthsAgo = format(subMonths(currentPSTDate, 2), 'yyyy-MM-dd');
 
     const prompt = `You are a friendly expense tracker assistant. Analyze this message and determine if it's an expense, spending breakdown request, transaction list request, or general conversation.
 
 Message: "${message}"
-Current Date: ${currentDate}
+Current Date (PST): ${currentDate}
 
 If this is an EXPENSE message, extract:
 1. Amount (as a number, no currency symbols)
@@ -170,14 +176,11 @@ Examples:
       logger.info(
         `Valid spending breakdown request for: ${timeRange.description}`,
       );
-      const endDate = new Date(timeRange.end);
-      endDate.setHours(23, 59, 59, 999);
-
       return {
         type: 'spending_breakdown',
         timeRange: {
-          start: new Date(timeRange.start),
-          end: endDate,
+          start: startOfDayPSTFromString(timeRange.start),
+          end: endOfDayPSTFromString(timeRange.end),
           description: timeRange.description,
         },
       };
@@ -201,14 +204,12 @@ Examples:
       logger.info(
         `Valid transaction list request for: ${timeRange.description}`,
       );
-      const endDate = new Date(timeRange.end);
-      endDate.setHours(23, 59, 59, 999);
 
       return {
         type: 'transaction_list',
         timeRange: {
-          start: new Date(timeRange.start),
-          end: endDate,
+          start: startOfDayPSTFromString(timeRange.start),
+          end: endOfDayPSTFromString(timeRange.end),
           description: timeRange.description,
         },
       };
@@ -247,7 +248,9 @@ Examples:
         expense: {
           amount: expense.amount,
           category: expense.category,
-          date: expense.date ? new Date(expense.date) : null,
+          date: expense.date
+            ? parseUserDateInput(expense.date)
+            : parseUserDateInput(null),
           description: expense.description,
         },
       };
