@@ -27,7 +27,7 @@ export async function parseMessage(
 ): Promise<LLMResponse> {
   try {
     logger.debug(`Parsing message with LLM: "${message}"`);
-    
+
     const prompt = `You are a friendly expense tracker assistant. Analyze this message and determine if it's an expense or general conversation.
 
 Message: "${message}"
@@ -65,7 +65,7 @@ Examples:
 - "what's the weather like" → {"type": "conversation", "message": "I'm an expense tracker, so I don't know about weather. But I can help you track any spending!"}`;
 
     logger.debug(`Making OpenAI API request with model: ${process.env.OPENAI_MODEL || 'gpt-3.5-turbo'}`);
-    
+
     const response = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
       messages: [
@@ -80,7 +80,7 @@ Examples:
 
     const content = response.choices[0]?.message?.content?.trim();
     logger.debug(`OpenAI response: ${content}`);
-    
+
     if (!content) {
       logger.warn('OpenAI returned empty response');
       return {
@@ -103,7 +103,7 @@ Examples:
     if (parsed.type === 'expense' && parsed.expense) {
       const expense = parsed.expense;
       logger.debug(`Validating expense: amount=${expense.amount}, category=${expense.category}`);
-      
+
       // Validate the expense data
       if (
         typeof expense.amount !== 'number' ||
@@ -115,7 +115,7 @@ Examples:
           amount: expense.amount,
           category: expense.category,
           date: expense.date,
-          description: expense.description
+          description: expense.description,
         });
         return {
           type: 'conversation',

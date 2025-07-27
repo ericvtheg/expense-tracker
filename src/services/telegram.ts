@@ -60,8 +60,10 @@ export async function initializeTelegramBot(): Promise<void> {
 
 export async function handleTelegramMessage(message: TelegramMessage) {
   try {
-    logger.info(`Processing message from user ${message.author.id} in chat ${message.chatId}`);
-    
+    logger.info(
+      `Processing message from user ${message.author.id} in chat ${message.chatId}`,
+    );
+
     if (!message.content) {
       logger.debug('Empty message content, skipping');
       return;
@@ -91,7 +93,9 @@ export async function handleTelegramMessage(message: TelegramMessage) {
 
     if (llmResponse.type === 'expense' && llmResponse.expense) {
       const parsedExpense = llmResponse.expense;
-      logger.info(`Processing expense: $${parsedExpense.amount} for category ${parsedExpense.category}`);
+      logger.info(
+        `Processing expense: $${parsedExpense.amount} for category ${parsedExpense.category}`,
+      );
 
       // Add the expense to the database
       await addExpense({
@@ -120,7 +124,9 @@ export async function handleTelegramMessage(message: TelegramMessage) {
         currentYear,
         currentMonth,
       );
-      logger.debug(`Monthly total: $${monthlyTotal}, Category total: $${categoryTotal}`);
+      logger.debug(
+        `Monthly total: $${monthlyTotal}, Category total: $${categoryTotal}`,
+      );
 
       // Format response
       const monthName = new Date(

@@ -16,8 +16,10 @@ export async function addExpense(expense: {
   transactionDate: Date;
 }): Promise<Transaction> {
   try {
-    logger.debug(`Adding expense for user ${expense.userId}: $${expense.amount} in ${expense.category}`);
-    
+    logger.debug(
+      `Adding expense for user ${expense.userId}: $${expense.amount} in ${expense.category}`,
+    );
+
     const newTransaction: NewTransaction = {
       userId: expense.userId,
       amount: expense.amount.toString(),
@@ -30,8 +32,10 @@ export async function addExpense(expense: {
       .insert(transactions)
       .values(newTransaction)
       .returning();
-      
-    logger.info(`Expense added successfully: Transaction ID ${createdTransaction.id}`);
+
+    logger.info(
+      `Expense added successfully: Transaction ID ${createdTransaction.id}`,
+    );
     return createdTransaction;
   } catch (error) {
     logger.error(`Failed to add expense for user ${expense.userId}:`, error);
@@ -45,8 +49,10 @@ export async function getMonthlyTotal(
   month: number,
 ): Promise<number> {
   try {
-    logger.debug(`Getting monthly total for user ${userId} for ${year}-${month}`);
-    
+    logger.debug(
+      `Getting monthly total for user ${userId} for ${year}-${month}`,
+    );
+
     const startOfMonth = new Date(year, month - 1, 1);
     const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
@@ -77,8 +83,10 @@ export async function getCategoryTotal(
   month: number,
 ): Promise<number> {
   try {
-    logger.debug(`Getting category total for user ${userId}, category ${category} for ${year}-${month}`);
-    
+    logger.debug(
+      `Getting category total for user ${userId}, category ${category} for ${year}-${month}`,
+    );
+
     const startOfMonth = new Date(year, month - 1, 1);
     const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
@@ -98,7 +106,10 @@ export async function getCategoryTotal(
     logger.debug(`Category ${category} total for user ${userId}: $${total}`);
     return total;
   } catch (error) {
-    logger.error(`Failed to get category total for user ${userId}, category ${category}:`, error);
+    logger.error(
+      `Failed to get category total for user ${userId}, category ${category}:`,
+      error,
+    );
     throw error;
   }
 }

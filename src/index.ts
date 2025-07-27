@@ -47,7 +47,7 @@ app.get('/', async(req, res) => {
 // Initialize app with migrations
 async function startApp() {
   logger.info('Starting expense tracker application');
-  
+
   await runMigrations();
 
   // Initialize Telegram bot
