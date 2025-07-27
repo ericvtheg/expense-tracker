@@ -1,7 +1,7 @@
 import {Telegraf} from 'telegraf';
 import dotenv from 'dotenv';
 import {findOrCreateUser} from './user';
-import {parseMessage} from './llm';
+import {parseMessage, generateSassyResponse} from './llm';
 import {
   addExpense,
   getMonthlyTotal,
@@ -117,9 +117,16 @@ export async function handleTelegramMessage(message: TelegramMessage) {
         return;
       }
 
-      let response = `💰 **Spending Breakdown for ${description}**\n\n`;
-      response += `**Total:** $${breakdown.totalAmount.toFixed(2)} (${breakdown.totalTransactions} transactions)\n\n`;
-      response += '**By Category:**\n';
+      const sassyResponse = await generateSassyResponse('spending_breakdown', {
+        description,
+        totalAmount: breakdown.totalAmount,
+        totalTransactions: breakdown.totalTransactions,
+        categories: breakdown.categories,
+      });
+
+      let response = sassyResponse + '\n\n';
+      response += `Total: $${breakdown.totalAmount.toFixed(2)} (${breakdown.totalTransactions} transactions)\n\n`;
+      response += 'By Category:\n';
 
       breakdown.categories.forEach((cat) => {
         const percentage = ((cat.total / breakdown.totalAmount) * 100).toFixed(
@@ -152,19 +159,26 @@ export async function handleTelegramMessage(message: TelegramMessage) {
         return;
       }
 
-      let response = `📋 **Transactions for ${description}**\n\n`;
+      const sassyResponse = await generateSassyResponse('transaction_list', {
+        description,
+        totalCount: transactionsList.totalCount,
+        hasMore: transactionsList.hasMore,
+        transactions: transactionsList.transactions,
+      });
+
+      let response = sassyResponse + '\n\n';
 
       transactionsList.transactions.forEach((transaction, index) => {
         const date = formatDateForUser(new Date(transaction.transactionDate));
-        response += `${index + 1}. **$${Number(transaction.amount).toFixed(2)}** - ${transaction.category}\n`;
+        response += `${index + 1}. $${Number(transaction.amount).toFixed(2)} - ${transaction.category}\n`;
         response += `   ${transaction.description} (${date})\n\n`;
       });
 
       if (transactionsList.hasMore) {
-        response += `📝 Showing ${transactionsList.transactions.length} of ${transactionsList.totalCount} transactions\n`;
+        response += `Showing ${transactionsList.transactions.length} of ${transactionsList.totalCount} transactions\n`;
         response += '(Limited to 15 most recent transactions)';
       } else {
-        response += `📝 ${transactionsList.totalCount} transactions total`;
+        response += `${transactionsList.totalCount} transactions total`;
       }
 
       await sendTelegramMessage(message.chatId, response);
@@ -214,7 +228,15 @@ export async function handleTelegramMessage(message: TelegramMessage) {
         currentYear,
         currentMonth - 1,
       ).toLocaleDateString('en-US', {month: 'long'});
-      const response = `Got it! Added $${parsedExpense.amount} under ${parsedExpense.category} category. Your total for ${monthName} is $${monthlyTotal.toFixed(2)} and ${parsedExpense.category} total is $${categoryTotal.toFixed(2)}.`;
+
+      const response = await generateSassyResponse('expense_confirmation', {
+        amount: parsedExpense.amount,
+        category: parsedExpense.category,
+        description: parsedExpense.description,
+        monthlyTotal,
+        categoryTotal,
+        monthName,
+      });
 
       await sendTelegramMessage(message.chatId, response);
       logger.info('Expense processed successfully');

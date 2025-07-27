@@ -36,6 +36,38 @@ export interface LLMResponse {
   timeRange?: TimeRange;
 }
 
+export interface SpendingBreakdownContext {
+  description: string;
+  totalAmount: number;
+  totalTransactions: number;
+  categories: Array<{
+    category: string;
+    total: number;
+    count: number;
+  }>;
+}
+
+export interface TransactionListContext {
+  description: string;
+  totalCount: number;
+  hasMore: boolean;
+  transactions: Array<{
+    amount: string | number;
+    description: string;
+    category: string;
+    transactionDate: string | Date;
+  }>;
+}
+
+export interface ExpenseConfirmationContext {
+  amount: number;
+  category: string;
+  description: string;
+  monthlyTotal: number;
+  categoryTotal: number;
+  monthName: string;
+}
+
 export async function parseMessage(message: string): Promise<LLMResponse> {
   try {
     logger.debug(`Parsing message with LLM: "${message}"`);
@@ -268,5 +300,92 @@ Examples:
       type: 'conversation',
       message: 'Sorry, something went wrong. Could you try again?',
     };
+  }
+}
+
+export async function generateSassyResponse(
+  type: 'spending_breakdown',
+  context: SpendingBreakdownContext,
+): Promise<string>;
+export async function generateSassyResponse(
+  type: 'transaction_list',
+  context: TransactionListContext,
+): Promise<string>;
+export async function generateSassyResponse(
+  type: 'expense_confirmation',
+  context: ExpenseConfirmationContext,
+): Promise<string>;
+export async function generateSassyResponse(
+  type: 'spending_breakdown' | 'transaction_list' | 'expense_confirmation',
+  context:
+    | SpendingBreakdownContext
+    | TransactionListContext
+    | ExpenseConfirmationContext,
+): Promise<string> {
+  try {
+    logger.debug(`Generating sassy response for type: ${type}`);
+
+    let prompt = '';
+
+    if (type === 'spending_breakdown') {
+      const spendingContext = context as SpendingBreakdownContext;
+      const {description, totalAmount, totalTransactions} = spendingContext;
+      prompt = `You are a sassy Monstera Money Bot. Write a SHORT one-line intro for a spending breakdown for ${description}. Total: $${totalAmount.toFixed(2)}, ${totalTransactions} transactions. Be flamboyant and sassy but VERY brief - max 15 words. Use MAXIMUM ONE emoji when applicable, never more than one. Use plain text only, no markdown. Do not include quotes in your response.
+
+Examples (without quotes):
+💸 Honey, here's your spending tea for last week...
+Babe, your wallet took some HITS this month...
+Darling, let's spill the financial facts...
+Girl, time to face the spending music...
+Sweetie, your money moves are questionable...`;
+    } else if (type === 'transaction_list') {
+      const transactionContext = context as TransactionListContext;
+      const {description, totalCount} = transactionContext;
+      prompt = `You are a sassy Monstera Money Bot. Write a SHORT one-line intro for a transaction list for ${description}. ${totalCount} transactions total. Be flamboyant and sassy but VERY brief - max 15 words. Use MAXIMUM ONE emoji when applicable, never more than one. Use plain text only, no markdown. Do not include quotes in your response.
+
+Examples (without quotes):
+📋 Sweetie, here's where your money went...
+Baby, your spending receipts are READY...
+Hun, let's review your financial choices...
+Darling, time to see your money trail...
+Babe, your transaction history is calling...`;
+    } else if (type === 'expense_confirmation') {
+      const expenseContext = context as ExpenseConfirmationContext;
+      const {amount, category, monthlyTotal, categoryTotal, monthName} =
+        expenseContext;
+      prompt = `You are a sassy Monstera Money Bot. Write a SHORT confirmation that $${amount} for ${category} was recorded. Monthly total: $${monthlyTotal.toFixed(2)}, ${category} total: $${categoryTotal.toFixed(2)} for ${monthName}. Be sassy but VERY brief - max 20 words. Use MAXIMUM ONE emoji when applicable, never more than one. Use plain text only, no markdown. Do not include quotes in your response.
+
+Examples (without quotes):
+💅 Noted! $50 nails habit is real. Monthly total: $500, Health Care total: $150
+Logged your $25 food splurge! You're at $800 this month, Food at $300
+Got it babe! $50 shopping spree recorded. Monthly: $600, Shopping: $200
+Recorded honey! $40 gas expense. Monthly: $700, Transportation: $180
+Sure thing! $15 coffee addiction noted. Monthly: $450, Food: $200`;
+    }
+
+    const response = await openai.chat.completions.create({
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.8,
+      max_tokens: 100,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    logger.debug(`Generated sassy response: ${content}`);
+
+    if (!content) {
+      logger.warn('OpenAI returned empty sassy response');
+      return 'Darling, something went wrong with my fabulous response generator! 💅✨';
+    }
+
+    return content;
+  } catch (error) {
+    logger.error('Error generating sassy response:', error);
+    return 'Honey, my sass machine is temporarily broken, but your expense is still recorded! 💸💅';
   }
 }
