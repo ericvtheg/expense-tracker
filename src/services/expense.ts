@@ -1,14 +1,18 @@
 import {eq, and, gte, lte, sum} from 'drizzle-orm';
 import {db} from '../db';
-import {transactions, type Transaction, type NewTransaction} from '../db/schema';
+import {
+  transactions,
+  type Transaction,
+  type NewTransaction,
+} from '../db/schema';
 import type {ExpenseCategory} from './categories';
 
 export async function addExpense(expense: {
-	userId: number;
-	amount: number;
-	category: ExpenseCategory;
-	description: string;
-	transactionDate: Date;
+  userId: number;
+  amount: number;
+  category: ExpenseCategory;
+  description: string;
+  transactionDate: Date;
 }): Promise<Transaction> {
   const newTransaction: NewTransaction = {
     userId: expense.userId,
@@ -18,11 +22,18 @@ export async function addExpense(expense: {
     transactionDate: expense.transactionDate,
   };
 
-  const [createdTransaction] = await db.insert(transactions).values(newTransaction).returning();
+  const [createdTransaction] = await db
+    .insert(transactions)
+    .values(newTransaction)
+    .returning();
   return createdTransaction;
 }
 
-export async function getMonthlyTotal(userId: number, year: number, month: number): Promise<number> {
+export async function getMonthlyTotal(
+  userId: number,
+  year: number,
+  month: number,
+): Promise<number> {
   const startOfMonth = new Date(year, month - 1, 1);
   const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 

@@ -4,7 +4,11 @@ import dotenv from 'dotenv';
 import {sql} from 'drizzle-orm';
 import {migrate} from 'drizzle-orm/postgres-js/migrator';
 import {db} from './db';
-import {telegramBot, initializeTelegramBot, handleTelegramMessage, type TelegramMessage} from './services/telegram';
+import {
+  telegramBot,
+  initializeTelegramBot,
+  handleTelegramMessage,
+} from './services/telegram';
 
 dotenv.config();
 
@@ -32,7 +36,6 @@ app.get('/', async(req, res) => {
   res.send(`Hello, World! The time from the DB is ${result[0].now}`);
 });
 
-
 // Initialize app with migrations
 async function startApp() {
   await runMigrations();
@@ -41,9 +44,9 @@ async function startApp() {
   await initializeTelegramBot();
 
   // Set up Telegram message event handler
-  telegramBot.on('text', async (ctx) => {
+  telegramBot.on('text', async(ctx) => {
     const message = ctx.message;
-    
+
     await handleTelegramMessage({
       id: message.message_id,
       author: {
