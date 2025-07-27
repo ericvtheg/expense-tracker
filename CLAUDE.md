@@ -81,7 +81,7 @@ Required for full functionality:
 - `PORT` - Server port (defaults to 3000)
 - `TELEGRAM_BOT_TOKEN` - Telegram bot token for authentication
 - `OPENAI_API_KEY` - OpenAI API access
-- `OPENAI_MODEL` - OpenAI model selection (e.g., "gpt-3.5-turbo", "gpt-4")
+- `OPENAI_MODEL` - OpenAI model selection (e.g., "gpt-4o-mini", "gpt-4o")
 
 For local development with local Telegram Bot API:
 - `TELEGRAM_API_ID` - Telegram API ID from https://my.telegram.org

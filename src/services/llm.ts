@@ -118,14 +118,14 @@ Examples:
 - "show me my expenses from last week" → {"type": "spending_breakdown", "timeRange": {"start": "${lastWeekStart}", "end": "${lastWeekEnd}", "description": "last week"}}
 - "what were my transactions the past 2 days" → {"type": "transaction_list", "timeRange": {"start": "${twoDaysAgo}", "end": "${currentDate}", "description": "past 2 days"}}
 - "list my purchases yesterday" → {"type": "transaction_list", "timeRange": {"start": "${yesterday}", "end": "${yesterday}", "description": "yesterday"}}
-- "hello how are you?" → {"type": "conversation", "message": "Hi there! I'm here to help you track your expenses. Just tell me what you spent money on!"}`;
+- "hello how are you?" → {"type": "conversation", "message": "I'm here to help you track your expenses. Just tell me what you spent money on!"}`;
 
     logger.debug(
-      `Making OpenAI API request with model: ${process.env.OPENAI_MODEL || 'gpt-3.5-turbo'}`,
+      `Making OpenAI API request with model: ${process.env.OPENAI_MODEL || 'gpt-4o-mini'}`,
     );
 
     const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       messages: [
         {
           role: 'user',
