@@ -27,6 +27,7 @@ export interface TimeRange {
   start: Date;
   end: Date;
   description: string;
+  showCategoryBreakdown?: boolean;
 }
 
 export interface LLMResponse {
@@ -82,7 +83,7 @@ export async function parseMessage(message: string): Promise<LLMResponse> {
     const lastWeekEnd = format(subDays(currentPSTDate, 1), 'yyyy-MM-dd');
     const twoMonthsAgo = format(subMonths(currentPSTDate, 2), 'yyyy-MM-dd');
 
-    const prompt = `You are a flamboyant sassy Monstera Money Bot assistant. Analyze this message and determine if it's an expense, spending breakdown request, transaction list request, or general conversation.
+    const prompt = `You are a flamboyant sassy Monstera Money Bot assistant. Analyze this message and determine if it's an expense, spending total request, spending breakdown request, transaction list request, or general conversation.
 
 Message: "${message}"
 Current Date (PST): ${currentDate}
@@ -93,10 +94,11 @@ If this is an EXPENSE message, extract:
 3. Date (if mentioned, otherwise null - we'll use today's date)
 4. Description (clean, concise description of the expense)
 
-If this is a SPENDING BREAKDOWN request (asking about totals/summaries over time), extract:
+If this is a SPENDING request (asking about spending over time), extract:
 1. Start date (calculate from current date based on the time range)
 2. End date (usually current date unless specified)
 3. Description of the time period
+4. Whether user wants category breakdown (true if they specifically ask for "breakdown", "categories", "by category", or similar; false for simple "how much spent" questions)
 
 If this is a TRANSACTION LIST request (asking for specific transactions/list of expenses), extract:
 1. Start date (calculate from current date based on the time range)
@@ -118,13 +120,14 @@ For expenses:
   }
 }
 
-For spending breakdown (totals/summaries):
+For spending requests:
 {
   "type": "spending_breakdown",
   "timeRange": {
     "start": "YYYY-MM-DD",
     "end": "YYYY-MM-DD",
-    "description": "brief description of time period"
+    "description": "brief description of time period",
+    "showCategoryBreakdown": boolean
   }
 }
 
@@ -146,8 +149,10 @@ For conversation:
 
 Examples:
 - "spent 30 bucks on coffee this morning" → {"type": "expense", "expense": {"amount": 30, "category": "Food & Drinks", "date": null, "description": "coffee"}}
-- "what has my spending been the past 2 months" → {"type": "spending_breakdown", "timeRange": {"start": "${twoMonthsAgo}", "end": "${currentDate}", "description": "past 2 months"}}
-- "show me my expenses from last week" → {"type": "spending_breakdown", "timeRange": {"start": "${lastWeekStart}", "end": "${lastWeekEnd}", "description": "last week"}}
+- "how much have I spent the past 2 days" → {"type": "spending_breakdown", "timeRange": {"start": "${twoDaysAgo}", "end": "${currentDate}", "description": "past 2 days", "showCategoryBreakdown": false}}
+- "what has my spending been the past 2 months" → {"type": "spending_breakdown", "timeRange": {"start": "${twoMonthsAgo}", "end": "${currentDate}", "description": "past 2 months", "showCategoryBreakdown": false}}
+- "show me breakdown by category last week" → {"type": "spending_breakdown", "timeRange": {"start": "${lastWeekStart}", "end": "${lastWeekEnd}", "description": "last week", "showCategoryBreakdown": true}}
+- "categories breakdown this month" → {"type": "spending_breakdown", "timeRange": {"start": "${currentDate}", "end": "${currentDate}", "description": "this month", "showCategoryBreakdown": true}}
 - "what were my transactions the past 2 days" → {"type": "transaction_list", "timeRange": {"start": "${twoDaysAgo}", "end": "${currentDate}", "description": "past 2 days"}}
 - "list my purchases yesterday" → {"type": "transaction_list", "timeRange": {"start": "${yesterday}", "end": "${yesterday}", "description": "yesterday"}}
 - "hello how are you?" → {"type": "conversation", "message": "I'm here to help you track your expenses. Just tell me what you spent money on...or don't, see if I care."}`;
@@ -190,13 +195,14 @@ Examples:
       };
     }
 
+
     if (parsed.type === 'spending_breakdown' && parsed.timeRange) {
       const timeRange = parsed.timeRange;
       logger.debug(
-        `Validating spending breakdown: start=${timeRange.start}, end=${timeRange.end}`,
+        `Validating spending breakdown: start=${timeRange.start}, end=${timeRange.end}, showCategoryBreakdown=${timeRange.showCategoryBreakdown}`,
       );
 
-      if (!timeRange.start || !timeRange.end || !timeRange.description) {
+      if (!timeRange.start || !timeRange.end || !timeRange.description || (timeRange.showCategoryBreakdown !== undefined && typeof timeRange.showCategoryBreakdown !== 'boolean')) {
         logger.warn('Spending breakdown validation failed', timeRange);
         return {
           type: 'conversation',
@@ -206,7 +212,7 @@ Examples:
       }
 
       logger.info(
-        `Valid spending breakdown request for: ${timeRange.description}`,
+        `Valid spending breakdown request for: ${timeRange.description} (showCategoryBreakdown: ${timeRange.showCategoryBreakdown})`,
       );
       return {
         type: 'spending_breakdown',
@@ -214,6 +220,7 @@ Examples:
           start: startOfDayPSTFromString(timeRange.start),
           end: endOfDayPSTFromString(timeRange.end),
           description: timeRange.description,
+          showCategoryBreakdown: timeRange.showCategoryBreakdown,
         },
       };
     }
