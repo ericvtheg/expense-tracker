@@ -9,7 +9,7 @@ import {
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
-  phoneNumber: text('phone_number').notNull().unique(),
+  telegramUserId: text('telegram_user_id').notNull().unique(),
   username: text('username').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

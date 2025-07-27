@@ -10,20 +10,20 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint 'src/**/*.ts' --fix",
-    "db:up": "docker-compose up -d postgres",
-    "db:down": "docker-compose down",
+    "services:up": "docker-compose up -d",
+    "services:down": "docker-compose down",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "body-parser": "^1.19.0",
-    "discord.js": "^14.21.0",
     "dotenv": "^17.2.1",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.3",
     "express": "^4.17.1",
     "openai": "^5.10.2",
-    "postgres": "^3.4.7"
+    "postgres": "^3.4.7",
+    "telegraf": "^4.16.3"
   },
   "devDependencies": {
     "@types/body-parser": "^1.19.0",

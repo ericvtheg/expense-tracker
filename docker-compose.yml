@@ -18,5 +18,18 @@ services:
       timeout: 5s
       retries: 5
 
+  telegram-bot-api:
+    image: aiogram/telegram-bot-api:latest
+    container_name: expense-tracker-telegram-api
+    environment:
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
+    ports:
+      - "8081:8081"
+    volumes:
+      - telegram_data:/var/lib/telegram-bot-api
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  telegram_data:

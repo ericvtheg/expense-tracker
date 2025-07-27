@@ -15,32 +15,50 @@ export interface ParsedExpense {
   description: string;
 }
 
-export async function parseExpenseMessage(
+export interface LLMResponse {
+  type: 'expense' | 'conversation';
+  expense?: ParsedExpense;
+  message?: string;
+}
+
+export async function parseMessage(
   message: string,
-): Promise<ParsedExpense | null> {
-  const prompt = `You are an expense tracker assistant. Parse this message and extract expense information.
+): Promise<LLMResponse> {
+  const prompt = `You are a friendly expense tracker assistant. Analyze this message and determine if it's an expense or general conversation.
 
 Message: "${message}"
 
-Extract:
+If this is an EXPENSE message, extract:
 1. Amount (as a number, no currency symbols)
 2. Category (must be one of: ${EXPENSE_CATEGORIES.join(', ')})
 3. Date (if mentioned, otherwise use today's date)
 4. Description (clean, concise description of the expense)
 
-Respond ONLY with a JSON object in this exact format:
+If this is GENERAL CONVERSATION (greetings, questions, unrelated chat), provide a brief, friendly response.
+
+Respond ONLY with a JSON object in one of these formats:
+
+For expenses:
 {
-  "amount": number,
-  "category": "exact category name from list",
-  "date": "YYYY-MM-DD",
-  "description": "brief description"
+  "type": "expense",
+  "expense": {
+    "amount": number,
+    "category": "exact category name from list",
+    "date": "YYYY-MM-DD",
+    "description": "brief description"
+  }
 }
 
-If you cannot parse the message or extract required information, respond with: null
+For conversation:
+{
+  "type": "conversation",
+  "message": "brief friendly response (1-2 sentences max)"
+}
 
 Examples:
-- "spent 30 bucks on coffee this morning" → {"amount": 30, "category": "Food & Drinks", "date": "2024-01-01", "description": "coffee"}
-- "1500 flight ticket last tuesday" → {"amount": 1500, "category": "Travel", "date": "2023-12-26", "description": "flight ticket"}`;
+- "spent 30 bucks on coffee this morning" → {"type": "expense", "expense": {"amount": 30, "category": "Food & Drinks", "date": "2024-01-01", "description": "coffee"}}
+- "hello how are you?" → {"type": "conversation", "message": "Hi there! I'm here to help you track your expenses. Just tell me what you spent money on!"}
+- "what's the weather like" → {"type": "conversation", "message": "I'm an expense tracker, so I don't know about weather. But I can help you track any spending!"}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -56,31 +74,58 @@ Examples:
     });
 
     const content = response.choices[0]?.message?.content?.trim();
-    if (!content || content === 'null') {
-      return null;
+    if (!content) {
+      return {
+        type: 'conversation',
+        message: 'Sorry, I didn\'t understand that. Could you try again?',
+      };
     }
 
     const parsed = JSON.parse(content);
 
-    // Validate the parsed response
-    if (
-      typeof parsed.amount !== 'number' ||
-      !EXPENSE_CATEGORIES.includes(parsed.category) ||
-      !parsed.date ||
-      !parsed.description
-    ) {
-      return null;
+    if (parsed.type === 'conversation') {
+      return {
+        type: 'conversation',
+        message: parsed.message || 'Thanks for chatting!',
+      };
+    }
+
+    if (parsed.type === 'expense' && parsed.expense) {
+      const expense = parsed.expense;
+      // Validate the expense data
+      if (
+        typeof expense.amount !== 'number' ||
+        !EXPENSE_CATEGORIES.includes(expense.category) ||
+        !expense.date ||
+        !expense.description
+      ) {
+        return {
+          type: 'conversation',
+          message: 'I couldn\'t parse that as an expense. Could you be more specific about the amount and what you spent it on?',
+        };
+      }
+
+      return {
+        type: 'expense',
+        expense: {
+          amount: expense.amount,
+          category: expense.category,
+          date: new Date(expense.date),
+          description: expense.description,
+        },
+      };
     }
 
     return {
-      amount: parsed.amount,
-      category: parsed.category,
-      date: new Date(parsed.date),
-      description: parsed.description,
+      type: 'conversation',
+      message: 'I\'m not sure how to help with that. Try telling me about an expense you\'d like to track!',
     };
   } catch (error) {
-    console.error('Error parsing expense message:', error);
-    return null;
+    console.error('Error parsing message:', error);
+    return {
+      type: 'conversation',
+      message: 'Sorry, something went wrong. Could you try again?',
+    };
   }
 }
 

@@ -3,14 +3,14 @@ import {db} from '../db';
 import {users, type User, type NewUser} from '../db/schema';
 
 export async function findOrCreateUser(
-  phoneNumber: string,
+  telegramUserId: string,
   userInfo: {
     username: string;
   },
 ): Promise<User> {
   // Try to find existing user
   const existingUser = await db.query.users.findFirst({
-    where: eq(users.phoneNumber, phoneNumber),
+    where: eq(users.telegramUserId, telegramUserId),
   });
 
   if (existingUser) {
@@ -19,7 +19,7 @@ export async function findOrCreateUser(
 
   // Create new user
   const newUser: NewUser = {
-    phoneNumber,
+    telegramUserId,
     username: userInfo.username,
   };
 
