@@ -138,14 +138,25 @@ export async function getSpendingBreakdown(
   startDate: Date,
   endDate: Date,
   description: string,
+  category?: string,
 ): Promise<SpendingBreakdown> {
   try {
     const utcStartDate = convertPSTToUTC(startDate);
     const utcEndDate = convertPSTToUTC(endDate);
 
     logger.debug(
-      `Getting spending breakdown for user ${userId} from ${utcStartDate.toISOString()} to ${utcEndDate.toISOString()}`,
+      `Getting spending breakdown for user ${userId} from ${utcStartDate.toISOString()} to ${utcEndDate.toISOString()}${category ? ` for category: ${category}` : ''}`,
     );
+
+    const whereConditions = [
+      eq(transactions.userId, userId),
+      gte(transactions.transactionDate, utcStartDate),
+      lte(transactions.transactionDate, utcEndDate),
+    ];
+
+    if (category) {
+      whereConditions.push(eq(transactions.category, category));
+    }
 
     const result = await db
       .select({
@@ -154,13 +165,7 @@ export async function getSpendingBreakdown(
         count: count(),
       })
       .from(transactions)
-      .where(
-        and(
-          eq(transactions.userId, userId),
-          gte(transactions.transactionDate, utcStartDate),
-          lte(transactions.transactionDate, utcEndDate),
-        ),
-      )
+      .where(and(...whereConditions))
       .groupBy(transactions.category)
       .orderBy(desc(sum(transactions.amount)));
 
@@ -177,7 +182,7 @@ export async function getSpendingBreakdown(
     );
 
     logger.debug(
-      `Spending breakdown for user ${userId}: $${totalAmount} across ${totalTransactions} transactions`,
+      `Spending breakdown for user ${userId}: $${totalAmount} across ${totalTransactions} transactions${category ? ` in ${category}` : ''}`,
     );
 
     return {

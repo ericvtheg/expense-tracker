@@ -100,20 +100,22 @@ export async function handleTelegramMessage(message: TelegramMessage) {
 
 
     if (llmResponse.type === 'spending_breakdown' && llmResponse.timeRange) {
-      const {start, end, description, showCategoryBreakdown = false} = llmResponse.timeRange;
-      logger.info(`Processing spending request for: ${description} (showCategoryBreakdown: ${showCategoryBreakdown})`);
+      const {start, end, description, showCategoryBreakdown = false, category} = llmResponse.timeRange;
+      logger.info(`Processing spending request for: ${description} (showCategoryBreakdown: ${showCategoryBreakdown}, category: ${category || 'all'})`);
 
       const breakdown = await getSpendingBreakdown(
         user.id,
         start,
         end,
         description,
+        category || undefined,
       );
 
       if (breakdown.totalTransactions === 0) {
+        const categoryText = category ? ` in ${category}` : '';
         await sendTelegramMessage(
           message.chatId,
-          `No expenses found for ${description}.`,
+          `No expenses found${categoryText} for ${description}.`,
         );
         return;
       }
@@ -126,20 +128,25 @@ export async function handleTelegramMessage(message: TelegramMessage) {
       });
 
       let response = sassyResponse + '\n\n';
-      response += `Total: $${breakdown.totalAmount.toFixed(2)} (${breakdown.totalTransactions} transactions)`;
 
-      if (showCategoryBreakdown) {
-        response += '\n\nBy Category:\n';
-        breakdown.categories.forEach((cat) => {
-          const percentage = ((cat.total / breakdown.totalAmount) * 100).toFixed(
-            1,
-          );
-          response += `• ${cat.category}: $${cat.total.toFixed(2)} (${cat.count} transactions, ${percentage}%)\n`;
-        });
+      if (category) {
+        response += `${category}: $${breakdown.totalAmount.toFixed(2)} (${breakdown.totalTransactions} transactions)`;
+      } else {
+        response += `Total: $${breakdown.totalAmount.toFixed(2)} (${breakdown.totalTransactions} transactions)`;
+
+        if (showCategoryBreakdown) {
+          response += '\n\nBy Category:\n';
+          breakdown.categories.forEach((cat) => {
+            const percentage = ((cat.total / breakdown.totalAmount) * 100).toFixed(
+              1,
+            );
+            response += `• ${cat.category}: $${cat.total.toFixed(2)} (${cat.count} transactions, ${percentage}%)\n`;
+          });
+        }
       }
 
       await sendTelegramMessage(message.chatId, response);
-      logger.info(`Spending ${showCategoryBreakdown ? 'breakdown' : 'total'} processed successfully`);
+      logger.info(`Spending ${category ? `for ${category}` : showCategoryBreakdown ? 'breakdown' : 'total'} processed successfully`);
       return;
     }
 

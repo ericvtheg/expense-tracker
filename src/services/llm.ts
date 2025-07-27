@@ -28,6 +28,7 @@ export interface TimeRange {
   end: Date;
   description: string;
   showCategoryBreakdown?: boolean;
+  category?: string;
 }
 
 export interface LLMResponse {
@@ -99,6 +100,16 @@ If this is a SPENDING request (asking about spending over time), extract:
 2. End date (usually current date unless specified)
 3. Description of the time period
 4. Whether user wants category breakdown (true if they specifically ask for "breakdown", "categories", "by category", or similar; false for simple "how much spent" questions)
+5. Specific category (if user mentions a category, map it to one of: ${EXPENSE_CATEGORIES.join(', ')}; null if asking about all spending)
+   Category mapping guide:
+   - "entertainment", "fun", "movies", "games" → "Entertainment"
+   - "food", "eating", "restaurants", "drinks", "coffee" → "Food & Drinks"  
+   - "transport", "gas", "uber", "taxi", "bus" → "Transportation"
+   - "shopping", "clothes", "amazon", "purchases" → "Shopping"
+   - "bills", "utilities", "rent", "electricity" → "Bills & Utilities"
+   - "health", "doctor", "medical", "pharmacy" → "Healthcare"
+   - "travel", "vacation", "trip", "flight" → "Travel"
+   - anything else → "Other"
 
 If this is a TRANSACTION LIST request (asking for specific transactions/list of expenses), extract:
 1. Start date (calculate from current date based on the time range)
@@ -127,7 +138,8 @@ For spending requests:
     "start": "YYYY-MM-DD",
     "end": "YYYY-MM-DD",
     "description": "brief description of time period",
-    "showCategoryBreakdown": boolean
+    "showCategoryBreakdown": boolean,
+    "category": "exact category name from list or null"
   }
 }
 
@@ -149,10 +161,12 @@ For conversation:
 
 Examples:
 - "spent 30 bucks on coffee this morning" → {"type": "expense", "expense": {"amount": 30, "category": "Food & Drinks", "date": null, "description": "coffee"}}
-- "how much have I spent the past 2 days" → {"type": "spending_breakdown", "timeRange": {"start": "${twoDaysAgo}", "end": "${currentDate}", "description": "past 2 days", "showCategoryBreakdown": false}}
-- "what has my spending been the past 2 months" → {"type": "spending_breakdown", "timeRange": {"start": "${twoMonthsAgo}", "end": "${currentDate}", "description": "past 2 months", "showCategoryBreakdown": false}}
-- "show me breakdown by category last week" → {"type": "spending_breakdown", "timeRange": {"start": "${lastWeekStart}", "end": "${lastWeekEnd}", "description": "last week", "showCategoryBreakdown": true}}
-- "categories breakdown this month" → {"type": "spending_breakdown", "timeRange": {"start": "${currentDate}", "end": "${currentDate}", "description": "this month", "showCategoryBreakdown": true}}
+- "how much have I spent the past 2 days" → {"type": "spending_breakdown", "timeRange": {"start": "${twoDaysAgo}", "end": "${currentDate}", "description": "past 2 days", "showCategoryBreakdown": false, "category": null}}
+- "how much did I spend on entertainment last week" → {"type": "spending_breakdown", "timeRange": {"start": "${lastWeekStart}", "end": "${lastWeekEnd}", "description": "last week", "showCategoryBreakdown": false, "category": "Entertainment"}}
+- "what did I spend on food the past month" → {"type": "spending_breakdown", "timeRange": {"start": "${twoMonthsAgo}", "end": "${currentDate}", "description": "past month", "showCategoryBreakdown": false, "category": "Food & Drinks"}}
+- "how much did i spend on entertainment" → {"type": "spending_breakdown", "timeRange": {"start": "${currentDate}", "end": "${currentDate}", "description": "recent spending", "showCategoryBreakdown": false, "category": "Entertainment"}}
+- "show me breakdown by category last week" → {"type": "spending_breakdown", "timeRange": {"start": "${lastWeekStart}", "end": "${lastWeekEnd}", "description": "last week", "showCategoryBreakdown": true, "category": null}}
+- "categories breakdown this month" → {"type": "spending_breakdown", "timeRange": {"start": "${currentDate}", "end": "${currentDate}", "description": "this month", "showCategoryBreakdown": true, "category": null}}
 - "what were my transactions the past 2 days" → {"type": "transaction_list", "timeRange": {"start": "${twoDaysAgo}", "end": "${currentDate}", "description": "past 2 days"}}
 - "list my purchases yesterday" → {"type": "transaction_list", "timeRange": {"start": "${yesterday}", "end": "${yesterday}", "description": "yesterday"}}
 - "hello how are you?" → {"type": "conversation", "message": "I'm here to help you track your expenses. Just tell me what you spent money on...or don't, see if I care."}`;
@@ -199,10 +213,10 @@ Examples:
     if (parsed.type === 'spending_breakdown' && parsed.timeRange) {
       const timeRange = parsed.timeRange;
       logger.debug(
-        `Validating spending breakdown: start=${timeRange.start}, end=${timeRange.end}, showCategoryBreakdown=${timeRange.showCategoryBreakdown}`,
+        `Validating spending breakdown: start=${timeRange.start}, end=${timeRange.end}, showCategoryBreakdown=${timeRange.showCategoryBreakdown}, category=${timeRange.category}`,
       );
 
-      if (!timeRange.start || !timeRange.end || !timeRange.description || (timeRange.showCategoryBreakdown !== undefined && typeof timeRange.showCategoryBreakdown !== 'boolean')) {
+      if (!timeRange.start || !timeRange.end || !timeRange.description || (timeRange.showCategoryBreakdown !== undefined && typeof timeRange.showCategoryBreakdown !== 'boolean') || (timeRange.category !== undefined && timeRange.category !== null && !EXPENSE_CATEGORIES.includes(timeRange.category as any))) {
         logger.warn('Spending breakdown validation failed', timeRange);
         return {
           type: 'conversation',
@@ -212,7 +226,7 @@ Examples:
       }
 
       logger.info(
-        `Valid spending breakdown request for: ${timeRange.description} (showCategoryBreakdown: ${timeRange.showCategoryBreakdown})`,
+        `Valid spending breakdown request for: ${timeRange.description} (showCategoryBreakdown: ${timeRange.showCategoryBreakdown}, category: ${timeRange.category || 'all'})`,
       );
       return {
         type: 'spending_breakdown',
@@ -221,6 +235,7 @@ Examples:
           end: endOfDayPSTFromString(timeRange.end),
           description: timeRange.description,
           showCategoryBreakdown: timeRange.showCategoryBreakdown,
+          category: timeRange.category,
         },
       };
     }
