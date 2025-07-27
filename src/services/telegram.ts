@@ -7,6 +7,7 @@ import {
   getMonthlyTotal,
   getCategoryTotal,
   getSpendingBreakdown,
+  getTransactionsList,
 } from './expense';
 import logger from '../utils/logger';
 
@@ -128,6 +129,45 @@ export async function handleTelegramMessage(message: TelegramMessage) {
 
       await sendTelegramMessage(message.chatId, response);
       logger.info('Spending breakdown processed successfully');
+      return;
+    }
+
+    if (llmResponse.type === 'transaction_list' && llmResponse.timeRange) {
+      const {start, end, description} = llmResponse.timeRange;
+      logger.info(`Processing transaction list request for: ${description}`);
+
+      const transactionsList = await getTransactionsList(
+        user.id,
+        start,
+        end,
+        description,
+      );
+
+      if (transactionsList.totalCount === 0) {
+        await sendTelegramMessage(
+          message.chatId,
+          `No transactions found for ${description}.`,
+        );
+        return;
+      }
+
+      let response = `📋 **Transactions for ${description}**\n\n`;
+
+      transactionsList.transactions.forEach((transaction, index) => {
+        const date = new Date(transaction.transactionDate).toLocaleDateString();
+        response += `${index + 1}. **$${Number(transaction.amount).toFixed(2)}** - ${transaction.category}\n`;
+        response += `   ${transaction.description} (${date})\n\n`;
+      });
+
+      if (transactionsList.hasMore) {
+        response += `📝 Showing ${transactionsList.transactions.length} of ${transactionsList.totalCount} transactions\n`;
+        response += '(Limited to 15 most recent transactions)';
+      } else {
+        response += `📝 ${transactionsList.totalCount} transactions total`;
+      }
+
+      await sendTelegramMessage(message.chatId, response);
+      logger.info('Transaction list processed successfully');
       return;
     }
 

@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import {EXPENSE_CATEGORIES, type ExpenseCategory} from './categories';
 import dotenv from 'dotenv';
 import logger from '../utils/logger';
+import {subDays, subMonths, format} from 'date-fns';
 
 dotenv.config();
 
@@ -23,21 +24,27 @@ export interface TimeRange {
 }
 
 export interface LLMResponse {
-  type: 'expense' | 'conversation' | 'spending_breakdown';
+  type: 'expense' | 'conversation' | 'spending_breakdown' | 'transaction_list';
   expense?: ParsedExpense;
   message?: string;
   timeRange?: TimeRange;
 }
 
-export async function parseMessage(
-  message: string,
-): Promise<LLMResponse> {
+export async function parseMessage(message: string): Promise<LLMResponse> {
   try {
     logger.debug(`Parsing message with LLM: "${message}"`);
 
     const currentDate = new Date().toISOString().split('T')[0];
-    
-    const prompt = `You are a friendly expense tracker assistant. Analyze this message and determine if it's an expense, spending breakdown request, or general conversation.
+
+    // Calculate relative dates for examples using date-fns
+    const today = new Date();
+    const yesterday = format(subDays(today, 1), 'yyyy-MM-dd');
+    const twoDaysAgo = format(subDays(today, 2), 'yyyy-MM-dd');
+    const lastWeekStart = format(subDays(today, 7), 'yyyy-MM-dd');
+    const lastWeekEnd = format(subDays(today, 1), 'yyyy-MM-dd');
+    const twoMonthsAgo = format(subMonths(today, 2), 'yyyy-MM-dd');
+
+    const prompt = `You are a friendly expense tracker assistant. Analyze this message and determine if it's an expense, spending breakdown request, transaction list request, or general conversation.
 
 Message: "${message}"
 Current Date: ${currentDate}
@@ -48,7 +55,12 @@ If this is an EXPENSE message, extract:
 3. Date (if mentioned, otherwise null - we'll use today's date)
 4. Description (clean, concise description of the expense)
 
-If this is a SPENDING BREAKDOWN request (asking about spending over time), extract:
+If this is a SPENDING BREAKDOWN request (asking about totals/summaries over time), extract:
+1. Start date (calculate from current date based on the time range)
+2. End date (usually current date unless specified)
+3. Description of the time period
+
+If this is a TRANSACTION LIST request (asking for specific transactions/list of expenses), extract:
 1. Start date (calculate from current date based on the time range)
 2. End date (usually current date unless specified)
 3. Description of the time period
@@ -68,9 +80,19 @@ For expenses:
   }
 }
 
-For spending breakdown:
+For spending breakdown (totals/summaries):
 {
   "type": "spending_breakdown",
+  "timeRange": {
+    "start": "YYYY-MM-DD",
+    "end": "YYYY-MM-DD",
+    "description": "brief description of time period"
+  }
+}
+
+For transaction list (specific transactions):
+{
+  "type": "transaction_list",
   "timeRange": {
     "start": "YYYY-MM-DD",
     "end": "YYYY-MM-DD",
@@ -86,11 +108,15 @@ For conversation:
 
 Examples:
 - "spent 30 bucks on coffee this morning" → {"type": "expense", "expense": {"amount": 30, "category": "Food & Drinks", "date": null, "description": "coffee"}}
-- "what has my spending been the past 2 months" → {"type": "spending_breakdown", "timeRange": {"start": "2025-05-27", "end": "${currentDate}", "description": "past 2 months"}}
-- "show me my expenses from last week" → {"type": "spending_breakdown", "timeRange": {"start": "2025-07-14", "end": "2025-07-20", "description": "last week"}}
+- "what has my spending been the past 2 months" → {"type": "spending_breakdown", "timeRange": {"start": "${twoMonthsAgo}", "end": "${currentDate}", "description": "past 2 months"}}
+- "show me my expenses from last week" → {"type": "spending_breakdown", "timeRange": {"start": "${lastWeekStart}", "end": "${lastWeekEnd}", "description": "last week"}}
+- "what were my transactions the past 2 days" → {"type": "transaction_list", "timeRange": {"start": "${twoDaysAgo}", "end": "${currentDate}", "description": "past 2 days"}}
+- "list my purchases yesterday" → {"type": "transaction_list", "timeRange": {"start": "${yesterday}", "end": "${yesterday}", "description": "yesterday"}}
 - "hello how are you?" → {"type": "conversation", "message": "Hi there! I'm here to help you track your expenses. Just tell me what you spent money on!"}`;
 
-    logger.debug(`Making OpenAI API request with model: ${process.env.OPENAI_MODEL || 'gpt-3.5-turbo'}`);
+    logger.debug(
+      `Making OpenAI API request with model: ${process.env.OPENAI_MODEL || 'gpt-3.5-turbo'}`,
+    );
 
     const response = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
@@ -101,7 +127,7 @@ Examples:
         },
       ],
       temperature: 0.1,
-      max_tokens: 200,
+      max_tokens: 250,
     });
 
     const content = response.choices[0]?.message?.content?.trim();
@@ -128,17 +154,22 @@ Examples:
 
     if (parsed.type === 'spending_breakdown' && parsed.timeRange) {
       const timeRange = parsed.timeRange;
-      logger.debug(`Validating spending breakdown: start=${timeRange.start}, end=${timeRange.end}`);
+      logger.debug(
+        `Validating spending breakdown: start=${timeRange.start}, end=${timeRange.end}`,
+      );
 
       if (!timeRange.start || !timeRange.end || !timeRange.description) {
         logger.warn('Spending breakdown validation failed', timeRange);
         return {
           type: 'conversation',
-          message: 'I couldn\'t understand the time range. Could you be more specific about the period you want to see?',
+          message:
+            'I couldn\'t understand the time range. Could you be more specific about the period you want to see?',
         };
       }
 
-      logger.info(`Valid spending breakdown request for: ${timeRange.description}`);
+      logger.info(
+        `Valid spending breakdown request for: ${timeRange.description}`,
+      );
       const endDate = new Date(timeRange.end);
       endDate.setHours(23, 59, 59, 999);
 
@@ -152,9 +183,42 @@ Examples:
       };
     }
 
+    if (parsed.type === 'transaction_list' && parsed.timeRange) {
+      const timeRange = parsed.timeRange;
+      logger.debug(
+        `Validating transaction list: start=${timeRange.start}, end=${timeRange.end}`,
+      );
+
+      if (!timeRange.start || !timeRange.end || !timeRange.description) {
+        logger.warn('Transaction list validation failed', timeRange);
+        return {
+          type: 'conversation',
+          message:
+            'I couldn\'t understand the time range. Could you be more specific about the period you want to see?',
+        };
+      }
+
+      logger.info(
+        `Valid transaction list request for: ${timeRange.description}`,
+      );
+      const endDate = new Date(timeRange.end);
+      endDate.setHours(23, 59, 59, 999);
+
+      return {
+        type: 'transaction_list',
+        timeRange: {
+          start: new Date(timeRange.start),
+          end: endDate,
+          description: timeRange.description,
+        },
+      };
+    }
+
     if (parsed.type === 'expense' && parsed.expense) {
       const expense = parsed.expense;
-      logger.debug(`Validating expense: amount=${expense.amount}, category=${expense.category}`);
+      logger.debug(
+        `Validating expense: amount=${expense.amount}, category=${expense.category}`,
+      );
 
       // Validate the expense data
       if (
@@ -170,11 +234,14 @@ Examples:
         });
         return {
           type: 'conversation',
-          message: 'I couldn\'t parse that as an expense. Could you be more specific about the amount and what you spent it on?',
+          message:
+            'I couldn\'t parse that as an expense. Could you be more specific about the amount and what you spent it on?',
         };
       }
 
-      logger.info(`Valid expense parsed: $${expense.amount} for ${expense.category}`);
+      logger.info(
+        `Valid expense parsed: $${expense.amount} for ${expense.category}`,
+      );
       return {
         type: 'expense',
         expense: {
@@ -189,7 +256,8 @@ Examples:
     logger.warn('Unexpected LLM response format');
     return {
       type: 'conversation',
-      message: 'I\'m not sure how to help with that. Try telling me about an expense you\'d like to track!',
+      message:
+        'I\'m not sure how to help with that. Try telling me about an expense you\'d like to track!',
     };
   } catch (error) {
     logger.error('Error parsing message with LLM:', error);
@@ -199,4 +267,3 @@ Examples:
     };
   }
 }
-

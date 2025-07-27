@@ -191,3 +191,80 @@ export async function getSpendingBreakdown(
     throw error;
   }
 }
+
+export interface TransactionsList {
+  transactions: Transaction[];
+  totalCount: number;
+  hasMore: boolean;
+  timeRange: {
+    start: Date;
+    end: Date;
+    description: string;
+  };
+}
+
+export async function getTransactionsList(
+  userId: number,
+  startDate: Date,
+  endDate: Date,
+  description: string,
+  limit: number = 15,
+): Promise<TransactionsList> {
+  try {
+    logger.debug(
+      `Getting transactions list for user ${userId} from ${startDate.toISOString()} to ${endDate.toISOString()}, limit ${limit}`,
+    );
+
+    // Get total count first
+    const countResult = await db
+      .select({count: count()})
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          gte(transactions.transactionDate, startDate),
+          lte(transactions.transactionDate, endDate),
+        ),
+      );
+
+    const totalCount = Number(countResult[0]?.count) || 0;
+
+    // Get the transactions with limit + 1 to check if there are more
+    const result = await db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          gte(transactions.transactionDate, startDate),
+          lte(transactions.transactionDate, endDate),
+        ),
+      )
+      .orderBy(desc(transactions.transactionDate))
+      .limit(limit + 1);
+
+    const hasMore = result.length > limit;
+    const transactionsList = hasMore ? result.slice(0, limit) : result;
+
+    logger.debug(
+      `Found ${transactionsList.length} transactions for user ${userId} (${totalCount} total, hasMore: ${hasMore})`,
+    );
+
+    return {
+      transactions: transactionsList,
+      totalCount,
+      hasMore,
+      timeRange: {
+        start: startDate,
+        end: endDate,
+        description,
+      },
+    };
+  } catch (error) {
+    logger.error(
+      `Failed to get transactions list for user ${userId}:`,
+      error,
+    );
+    throw error;
+  }
+}
