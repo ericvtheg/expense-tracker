@@ -7,7 +7,7 @@ const logger = winston.createLogger({
     winston.format.errors({stack: true}),
     winston.format.json(),
   ),
-  defaultMeta: {service: 'expense-tracker'},
+  defaultMeta: {service: 'monstera-money'},
   transports: [
     new winston.transports.File({filename: 'logs/error.log', level: 'error'}),
     new winston.transports.File({filename: 'logs/combined.log'}),

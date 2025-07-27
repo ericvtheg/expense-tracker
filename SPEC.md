@@ -1,4 +1,4 @@
-# Expense Tracker Telegram Bot - Technical Specification
+# Monstera Money Telegram Bot - Technical Specification
 
 ## Overview
 Express.js server with Telegram bot integration that uses LLM to parse natural language expense messages and track spending by category.

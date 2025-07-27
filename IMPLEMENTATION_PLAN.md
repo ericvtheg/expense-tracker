@@ -1,4 +1,4 @@
-# Expense Tracker Telegram Bot - Implementation Plan
+# Monstera Money Telegram Bot - Implementation Plan
 
 ## Phase 1: Project Setup & Dependencies
 

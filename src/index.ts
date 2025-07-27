@@ -46,7 +46,7 @@ app.get('/', async(req, res) => {
 
 // Initialize app with migrations
 async function startApp() {
-  logger.info('Starting expense tracker application');
+  logger.info('Starting Monstera Money application');
 
   await runMigrations();
 
@@ -80,7 +80,7 @@ async function startApp() {
   telegramBot.launch();
 
   app.listen(port, () => {
-    logger.info(`Expense tracker bot listening at http://localhost:${port}`);
+    logger.info(`Monstera Money bot listening at http://localhost:${port}`);
   });
 
   // Enable graceful stop

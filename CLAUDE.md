@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an expense tracker Telegram bot built with Express.js and TypeScript. The service uses Telegraf for bot messaging and LLM integration to parse natural language expense messages and automatically categorize spending. The application connects to PostgreSQL via Drizzle ORM and is designed for deployment on Railway.
+This is a Monstera Money Telegram bot built with Express.js and TypeScript. The service uses Telegraf for bot messaging and LLM integration to parse natural language expense messages and automatically categorize spending. The application connects to PostgreSQL via Drizzle ORM and is designed for deployment on Railway.
 
 ## Development Commands
 
@@ -31,14 +31,14 @@ This is an expense tracker Telegram bot built with Express.js and TypeScript. Th
 - **Environment**: dotenv for configuration management
 
 ### Database Setup
-- PostgreSQL runs in Docker container (expense-tracker-postgres)
-- Default database: `expense_tracker`
+- PostgreSQL runs in Docker container (monstera-money-postgres)
+- Default database: `monstera_money`
 - Connection via `DATABASE_URL` environment variable
 - Health checks enabled for container reliability
 
 ### Local Development Setup
 - Copy `.env.example` to `.env` and fill in your values
-- Local Telegram Bot API runs in Docker container (expense-tracker-telegram-api)
+- Local Telegram Bot API runs in Docker container (monstera-money-telegram-api)
 - Available at `http://localhost:8081` for development
 - Requires `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` environment variables
 - Automatically used when `NODE_ENV=development` and `TELEGRAM_LOCAL_API=true`

@@ -3,9 +3,9 @@ version: '3.8'
 services:
   postgres:
     image: postgres:latest
-    container_name: expense-tracker-postgres
+    container_name: monstera-money-postgres
     environment:
-      POSTGRES_DB: expense_tracker
+      POSTGRES_DB: monstera_money
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
@@ -20,7 +20,7 @@ services:
 
   telegram-bot-api:
     image: aiogram/telegram-bot-api:latest
-    container_name: expense-tracker-telegram-api
+    container_name: monstera-money-telegram-api
     environment:
       TELEGRAM_API_ID: ${TELEGRAM_API_ID}
       TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}

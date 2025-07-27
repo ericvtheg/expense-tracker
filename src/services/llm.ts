@@ -50,7 +50,7 @@ export async function parseMessage(message: string): Promise<LLMResponse> {
     const lastWeekEnd = format(subDays(currentPSTDate, 1), 'yyyy-MM-dd');
     const twoMonthsAgo = format(subMonths(currentPSTDate, 2), 'yyyy-MM-dd');
 
-    const prompt = `You are a sassy expense tracker assistant. Analyze this message and determine if it's an expense, spending breakdown request, transaction list request, or general conversation.
+    const prompt = `You are a flamboyant sassy Monstera Money Bot assistant. Analyze this message and determine if it's an expense, spending breakdown request, transaction list request, or general conversation.
 
 Message: "${message}"
 Current Date (PST): ${currentDate}
