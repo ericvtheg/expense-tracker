@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an expense tracker RCS messaging service built with Express.js and TypeScript. The service uses Twilio for RCS messaging and LLM integration to parse natural language expense messages and automatically categorize spending. The application connects to PostgreSQL via Drizzle ORM and is designed for deployment on Railway.
+This is an expense tracker Discord bot built with Express.js and TypeScript. The service uses Discord.js for bot messaging and LLM integration to parse natural language expense messages and automatically categorize spending. The application connects to PostgreSQL via Drizzle ORM and is designed for deployment on Railway.
 
 ## Development Commands
 
@@ -24,7 +24,8 @@ This is an expense tracker RCS messaging service built with Express.js and TypeS
 ## Architecture
 
 ### Core Components
-- **src/index.ts**: Main Express server entry point with basic database connectivity test
+- **src/index.ts**: Main Express server entry point with Discord bot initialization
+- **src/services/discord.ts**: Discord bot client and messaging functionality
 - **Database**: PostgreSQL with Drizzle ORM for type-safe queries
 - **Environment**: dotenv for configuration management
 
@@ -42,10 +43,10 @@ This is an expense tracker RCS messaging service built with Express.js and TypeS
 ## Key Technical Requirements
 
 Based on SPEC.md, this project will implement:
-- Twilio RCS messaging integration
+- Discord bot messaging integration
 - OpenAI API for natural language processing
 - Default expense categories (Food & Drinks, Transportation, Shopping, etc.)
-- User management via phone numbers
+- User management via Discord user IDs
 - Monthly spending summaries and categorization
 
 ## Environment Variables
@@ -53,8 +54,6 @@ Based on SPEC.md, this project will implement:
 Required for full functionality:
 - `DATABASE_URL` - PostgreSQL connection string
 - `PORT` - Server port (defaults to 3000)
-- `TWILIO_ACCOUNT_SID` - Twilio account SID
-- `TWILIO_AUTH_TOKEN` - Twilio authentication token
-- `TWILIO_PHONE_NUMBER` - Twilio phone number for sending messages
+- `DISCORD_BOT_TOKEN` - Discord bot token for authentication
 - `OPENAI_API_KEY` - OpenAI API access
 - `OPENAI_MODEL` - OpenAI model selection (e.g., "gpt-3.5-turbo", "gpt-4")

@@ -1,16 +1,24 @@
-import {pgTable, serial, text, decimal, timestamp, integer} from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  serial,
+  text,
+  decimal,
+  timestamp,
+  integer,
+} from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   phoneNumber: text('phone_number').notNull().unique(),
-  firstName: text('first_name'),
-  lastName: text('last_name'),
+  username: text('username').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const transactions = pgTable('transactions', {
   id: serial('id').primaryKey(),
-  userId: integer('user_id').references(() => users.id).notNull(),
+  userId: integer('user_id')
+    .references(() => users.id)
+    .notNull(),
   amount: decimal('amount', {precision: 10, scale: 2}).notNull(),
   category: text('category').notNull(),
   description: text('description').notNull(),

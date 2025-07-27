@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import {sql} from 'drizzle-orm';
 import {migrate} from 'drizzle-orm/postgres-js/migrator';
 import {db} from './db';
-import {twilioClient, type TwilioMessage} from './services/twilio';
+import {discordClient, initializeDiscordBot, sendDiscordMessage, type DiscordMessage} from './services/discord';
 import {parseExpenseMessage} from './services/llm';
 import {findOrCreateUser} from './services/user';
 import {
@@ -39,34 +39,27 @@ app.get('/', async(req, res) => {
   res.send(`Hello, World! The time from the DB is ${result[0].now}`);
 });
 
-// Twilio webhook endpoint for RCS messages
-app.post('/webhook/twilio', async(req, res) => {
+// Discord message handler
+async function handleDiscordMessage(message: DiscordMessage) {
   try {
-    const message: TwilioMessage = req.body;
-
-    if (!message.Body) {
-      return res.sendStatus(200);
+    if (!message.content) {
+      return;
     }
 
-    const phoneNumber = message.From;
-    const text = message.Body;
+    const userId = message.author.id;
+    const text = message.content;
 
-    // Find or create user using phone number
-    const user = await findOrCreateUser(phoneNumber, {
-      firstName: undefined,
-      lastName: undefined,
+    // Find or create user using Discord user ID
+    const user = await findOrCreateUser(userId, {
+      username: message.author.username,
     });
 
     // Parse the expense message using LLM
     const parsedExpense = await parseExpenseMessage(text);
 
     if (!parsedExpense) {
-      await twilioClient.messages.create({
-        body: 'I don\'t understand, please try again',
-        from: process.env.TWILIO_PHONE_NUMBER!,
-        to: phoneNumber,
-      });
-      return res.sendStatus(200);
+      await sendDiscordMessage(message.channelId, 'I don\'t understand, please try again');
+      return;
     }
 
     // Add the expense to the database
@@ -102,22 +95,48 @@ app.post('/webhook/twilio', async(req, res) => {
     ).toLocaleDateString('en-US', {month: 'long'});
     const response = `Got it! Added $${parsedExpense.amount} under ${parsedExpense.category} category. Your total for ${monthName} is $${monthlyTotal.toFixed(2)} and ${parsedExpense.category} total is $${categoryTotal.toFixed(2)}.`;
 
-    await twilioClient.messages.create({
-      body: response,
-      from: process.env.TWILIO_PHONE_NUMBER!,
-      to: phoneNumber,
-    });
-
-    res.sendStatus(200);
+    await sendDiscordMessage(message.channelId, response);
   } catch (error) {
-    console.error('Error processing webhook:', error);
-    res.sendStatus(500);
+    console.error('Error processing Discord message:', error);
+    await sendDiscordMessage(message.channelId, 'Sorry, something went wrong processing your expense.');
   }
-});
+}
 
 // Initialize app with migrations
 async function startApp() {
   await runMigrations();
+
+  // Initialize Discord bot
+  await initializeDiscordBot();
+
+  // Set up Discord message event handler
+  discordClient.on('messageCreate', async(message) => {
+    // Ignore messages from bots
+    if (message.author.bot) return;
+
+    // Only respond to direct messages or mentions
+    if (!message.guild && message.channel.type === 1) { // DM
+      await handleDiscordMessage({
+        id: message.id,
+        author: {
+          id: message.author.id,
+          username: message.author.username,
+        },
+        content: message.content,
+        channelId: message.channelId,
+      });
+    } else if (message.mentions.has(discordClient.user!)) { // Mentioned in server
+      await handleDiscordMessage({
+        id: message.id,
+        author: {
+          id: message.author.id,
+          username: message.author.username,
+        },
+        content: message.content.replace(`<@${discordClient.user!.id}>`, '').trim(),
+        channelId: message.channelId,
+      });
+    }
+  });
 
   app.listen(port, () => {
     console.log(`Expense tracker bot listening at http://localhost:${port}`);
