@@ -5,11 +5,11 @@
   },
   "deploy": {
     "runtime": "V2",
-    "numReplicas": 1,
+    "numReplicas": 0,
     "sleepApplication": false,
     "multiRegionConfig": {
       "us-west2": {
-        "numReplicas": 1
+        "numReplicas": 0
       }
     },
     "restartPolicyType": "ON_FAILURE",
