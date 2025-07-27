@@ -9,17 +9,18 @@ import {
   initializeTelegramBot,
   handleTelegramMessage,
 } from './services/telegram';
+import logger from './utils/logger';
 
 dotenv.config();
 
 // Run migrations on startup
 async function runMigrations() {
   try {
-    console.log('Running database migrations...');
+    logger.info('Running database migrations...');
     await migrate(db, {migrationsFolder: './drizzle'});
-    console.log('Database migrations completed successfully');
+    logger.info('Database migrations completed successfully');
   } catch (error) {
-    console.error('Migration failed:', error);
+    logger.error('Migration failed:', error);
     process.exit(1);
   }
 }
@@ -32,46 +33,68 @@ app.use(bodyParser.raw({type: 'application/vnd.custom-type'}));
 app.use(bodyParser.text({type: 'text/html'}));
 
 app.get('/', async(req, res) => {
-  const result = await db.execute(sql`SELECT NOW()`);
-  res.send(`Hello, World! The time from the DB is ${result[0].now}`);
+  try {
+    logger.debug('Health check endpoint accessed');
+    const result = await db.execute(sql`SELECT NOW()`);
+    logger.debug('Database connection successful');
+    res.send(`Hello, World! The time from the DB is ${result[0].now}`);
+  } catch (error) {
+    logger.error('Health check failed:', error);
+    res.status(500).send('Database connection failed');
+  }
 });
 
 // Initialize app with migrations
 async function startApp() {
+  logger.info('Starting expense tracker application');
+  
   await runMigrations();
 
   // Initialize Telegram bot
+  logger.info('Initializing Telegram bot');
   await initializeTelegramBot();
 
   // Set up Telegram message event handler
   telegramBot.on('text', async(ctx) => {
     const message = ctx.message;
+    logger.debug(`Received message from user ${message.from.id}: ${message.text}`);
 
-    await handleTelegramMessage({
-      id: message.message_id,
-      author: {
-        id: message.from.id,
-        username: message.from.username,
-        first_name: message.from.first_name,
-      },
-      content: message.text,
-      chatId: message.chat.id,
-    });
+    try {
+      await handleTelegramMessage({
+        id: message.message_id,
+        author: {
+          id: message.from.id,
+          username: message.from.username,
+          first_name: message.from.first_name,
+        },
+        content: message.text,
+        chatId: message.chat.id,
+      });
+    } catch (error) {
+      logger.error('Error handling Telegram message:', error);
+    }
   });
 
   // Start the Telegram bot
+  logger.info('Launching Telegram bot');
   telegramBot.launch();
 
   app.listen(port, () => {
-    console.log(`Expense tracker bot listening at http://localhost:${port}`);
+    logger.info(`Expense tracker bot listening at http://localhost:${port}`);
   });
 
   // Enable graceful stop
-  process.once('SIGINT', () => telegramBot.stop('SIGINT'));
-  process.once('SIGTERM', () => telegramBot.stop('SIGTERM'));
+  process.once('SIGINT', () => {
+    logger.info('Received SIGINT, shutting down gracefully');
+    telegramBot.stop('SIGINT');
+  });
+  process.once('SIGTERM', () => {
+    logger.info('Received SIGTERM, shutting down gracefully');
+    telegramBot.stop('SIGTERM');
+  });
 }
 
 startApp().catch((error) => {
-  console.error('Failed to start application:', error);
+  logger.error('Failed to start application:', error);
   process.exit(1);
 });
