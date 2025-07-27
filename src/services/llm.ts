@@ -12,7 +12,7 @@ const openai = new OpenAI({
 export interface ParsedExpense {
   amount: number;
   category: ExpenseCategory;
-  date: Date;
+  date: Date | null;
   description: string;
 }
 
@@ -35,7 +35,7 @@ Message: "${message}"
 If this is an EXPENSE message, extract:
 1. Amount (as a number, no currency symbols)
 2. Category (must be one of: ${EXPENSE_CATEGORIES.join(', ')})
-3. Date (if mentioned, otherwise use today's date)
+3. Date (if mentioned, otherwise null - we'll use today's date)
 4. Description (clean, concise description of the expense)
 
 If this is GENERAL CONVERSATION (greetings, questions, unrelated chat), provide a brief, friendly response.
@@ -48,7 +48,7 @@ For expenses:
   "expense": {
     "amount": number,
     "category": "exact category name from list",
-    "date": "YYYY-MM-DD",
+    "date": "YYYY-MM-DD" or null,
     "description": "brief description"
   }
 }
@@ -60,7 +60,8 @@ For conversation:
 }
 
 Examples:
-- "spent 30 bucks on coffee this morning" → {"type": "expense", "expense": {"amount": 30, "category": "Food & Drinks", "date": "2024-01-01", "description": "coffee"}}
+- "spent 30 bucks on coffee this morning" → {"type": "expense", "expense": {"amount": 30, "category": "Food & Drinks", "date": null, "description": "coffee"}}
+- "bought lunch yesterday for 15 dollars" → {"type": "expense", "expense": {"amount": 15, "category": "Food & Drinks", "date": "2024-07-26", "description": "lunch"}}
 - "hello how are you?" → {"type": "conversation", "message": "Hi there! I'm here to help you track your expenses. Just tell me what you spent money on!"}
 - "what's the weather like" → {"type": "conversation", "message": "I'm an expense tracker, so I don't know about weather. But I can help you track any spending!"}`;
 
@@ -108,7 +109,6 @@ Examples:
       if (
         typeof expense.amount !== 'number' ||
         !EXPENSE_CATEGORIES.includes(expense.category) ||
-        !expense.date ||
         !expense.description
       ) {
         logger.warn('Expense validation failed', {
@@ -129,7 +129,7 @@ Examples:
         expense: {
           amount: expense.amount,
           category: expense.category,
-          date: new Date(expense.date),
+          date: expense.date ? new Date(expense.date) : null,
           description: expense.description,
         },
       };

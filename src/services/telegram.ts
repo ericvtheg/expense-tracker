@@ -103,7 +103,7 @@ export async function handleTelegramMessage(message: TelegramMessage) {
         amount: parsedExpense.amount,
         category: parsedExpense.category,
         description: parsedExpense.description,
-        transactionDate: parsedExpense.date,
+        transactionDate: parsedExpense.date || new Date(),
       });
       logger.debug('Expense added to database');
 
