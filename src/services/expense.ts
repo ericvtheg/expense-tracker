@@ -1,4 +1,5 @@
 import {eq, and, gte, lte, sum} from 'drizzle-orm';
+import {startOfMonth, endOfMonth} from 'date-fns';
 import {db} from '../db';
 import {
   transactions,
@@ -22,7 +23,7 @@ export async function addExpense(expense: {
 
     const newTransaction: NewTransaction = {
       userId: expense.userId,
-      amount: expense.amount.toString(),
+      amount: expense.amount.toFixed(2),
       category: expense.category,
       description: expense.description,
       transactionDate: expense.transactionDate,
@@ -53,8 +54,8 @@ export async function getMonthlyTotal(
       `Getting monthly total for user ${userId} for ${year}-${month}`,
     );
 
-    const startOfMonth = new Date(year, month - 1, 1);
-    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+    const monthStart = startOfMonth(new Date(year, month - 1));
+    const monthEnd = endOfMonth(new Date(year, month - 1));
 
     const result = await db
       .select({total: sum(transactions.amount)})
@@ -62,8 +63,8 @@ export async function getMonthlyTotal(
       .where(
         and(
           eq(transactions.userId, userId),
-          gte(transactions.transactionDate, startOfMonth),
-          lte(transactions.transactionDate, endOfMonth),
+          gte(transactions.transactionDate, monthStart),
+          lte(transactions.transactionDate, monthEnd),
         ),
       );
 
@@ -87,8 +88,8 @@ export async function getCategoryTotal(
       `Getting category total for user ${userId}, category ${category} for ${year}-${month}`,
     );
 
-    const startOfMonth = new Date(year, month - 1, 1);
-    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+    const monthStart = startOfMonth(new Date(year, month - 1));
+    const monthEnd = endOfMonth(new Date(year, month - 1));
 
     const result = await db
       .select({total: sum(transactions.amount)})
@@ -97,8 +98,8 @@ export async function getCategoryTotal(
         and(
           eq(transactions.userId, userId),
           eq(transactions.category, category),
-          gte(transactions.transactionDate, startOfMonth),
-          lte(transactions.transactionDate, endOfMonth),
+          gte(transactions.transactionDate, monthStart),
+          lte(transactions.transactionDate, monthEnd),
         ),
       );
 
