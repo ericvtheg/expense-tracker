@@ -139,11 +139,14 @@ Examples:
       }
 
       logger.info(`Valid spending breakdown request for: ${timeRange.description}`);
+      const endDate = new Date(timeRange.end);
+      endDate.setHours(23, 59, 59, 999);
+
       return {
         type: 'spending_breakdown',
         timeRange: {
           start: new Date(timeRange.start),
-          end: new Date(timeRange.end),
+          end: endDate,
           description: timeRange.description,
         },
       };
